@@ -186,5 +186,4 @@ const GestionProductos: React.FC = () => {
     </div>
   );
 };
-
 export default GestionProductos;
