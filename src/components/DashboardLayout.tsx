@@ -1,7 +1,7 @@
 // src/components/DashboardLayout.tsx
 
 import React from 'react';
-import { Link, Outlet, useNavigate, NavLink } from 'react-router-dom';
+import { Outlet, useNavigate, NavLink } from 'react-router-dom';
 
 const DashboardLayout: React.FC = () => {
   const navigate = useNavigate();

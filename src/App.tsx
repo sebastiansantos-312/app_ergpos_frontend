@@ -2,7 +2,7 @@
 
 // --- 1. IMPORTACIONES NECESARIAS ---
 // Importa React y los componentes de la librería de rutas
-import React from 'react';
+
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 
 // Importa TODOS los componentes y páginas que hemos creado

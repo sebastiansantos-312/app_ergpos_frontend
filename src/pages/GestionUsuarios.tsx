@@ -1,149 +1,134 @@
-// src/pages/GestionUsuarios.tsx
+// src/pages/GestionProductos.tsx
 
 import React, { useState, useEffect } from 'react';
 
-// --- Definición de Tipos (Buena práctica en TypeScript) ---
-interface Rol {
-  id: string;
+// --- Definición de Tipos ---
+interface Producto {
+  id?: string; // El ID es opcional al crear
+  codigo: string;
   nombre: string;
+  cantidad: number;
+  precio: number;
+  stock: number;
+  proveedor: string;
+  fechaEntrada?: string; // La fecha la genera el backend
 }
 
-interface Usuario {
-  id: string;
-  nombre: string;
-  email: string;
-  rol: Rol;
-}
+const initialState: Producto = {
+  codigo: '',
+  nombre: '',
+  cantidad: 0,
+  precio: 0,
+  stock: 0,
+  proveedor: '',
+};
 
-const GestionUsuarios: React.FC = () => {
+const GestionProductos: React.FC = () => {
   // --- Estados del Componente ---
-  const [usuarios, setUsuarios] = useState<Usuario[]>([]);
-  const [roles, setRoles] = useState<Rol[]>([]);
+  const [productos, setProductos] = useState<Producto[]>([]);
+  const [newProducto, setNewProducto] = useState<Producto>(initialState);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
-  // --- useEffect para Cargar Datos del Backend ---
+  // --- useEffect para Cargar la Lista de Productos ---
   useEffect(() => {
-    const fetchData = async () => {
-      setIsLoading(true);
-      setError(null);
+    const fetchProductos = async () => {
       try {
-        // Obtenemos la URL base de las variables de entorno
-        const apiUrl = import.meta.env.VITE_API_BASE_URL;
-
-        // Hacemos las peticiones para usuarios y roles en paralelo
-        const [usuariosResponse, rolesResponse] = await Promise.all([
-          fetch(`${apiUrl}/usuarios`),
-          fetch(`${apiUrl}/roles`),
-        ]);
-
-        if (!usuariosResponse.ok || !rolesResponse.ok) {
-          throw new Error('No se pudieron cargar los datos del servidor.');
+        const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/productos`);
+        if (!response.ok) {
+          throw new Error('No se pudieron cargar los productos.');
         }
-
-        const usuariosData: Usuario[] = await usuariosResponse.json();
-        const rolesData: Rol[] = await rolesResponse.json();
-
-        setUsuarios(usuariosData);
-        setRoles(rolesData);
+        const data: Producto[] = await response.json();
+        setProductos(data);
       } catch (err: any) {
         setError(err.message);
       } finally {
         setIsLoading(false);
       }
     };
+    fetchProductos();
+  }, []); // Se ejecuta solo al montar el componente
 
-    fetchData();
-  }, []); // El array vacío asegura que esto se ejecute solo una vez, al montar el componente
+  // --- Manejadores de Eventos del Formulario ---
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setNewProducto(prevState => ({
+      ...prevState,
+      [name]: name === 'cantidad' || name === 'precio' || name === 'stock' ? parseFloat(value) : value,
+    }));
+  };
 
-  // --- Función para Manejar el Cambio de Rol ---
-  const handleRoleChange = async (userId: string, newRoleId: string) => {
-    // Buscamos el usuario que vamos a modificar en el estado local
-    const usuarioOriginal = usuarios.find(u => u.id === userId);
-    if (!usuarioOriginal) return;
-
-    // Creamos el objeto con los datos a enviar al backend
-    const updatedUsuarioPayload = {
-      ...usuarioOriginal,
-      rol: { id: newRoleId }, // Solo necesitamos enviar el ID del nuevo rol
-    };
-
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/usuarios/${userId}`, {
-        method: 'PUT',
+      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/productos`, {
+        method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(updatedUsuarioPayload),
+        body: JSON.stringify(newProducto),
       });
 
       if (!response.ok) {
-        throw new Error('No se pudo actualizar el rol.');
+        throw new Error('Error al registrar el producto.');
       }
 
-      // Si la actualización fue exitosa, actualizamos el estado local para reflejar el cambio
-      // sin necesidad de volver a cargar toda la lista.
-      setUsuarios(prevUsuarios =>
-        prevUsuarios.map(u =>
-          u.id === userId ? { ...u, rol: roles.find(r => r.id === newRoleId)! } : u
-        )
-      );
+      const productoGuardado: Producto = await response.json();
+      
+      // Actualizamos la lista de productos y reiniciamos el formulario
+      setProductos(prevProductos => [...prevProductos, productoGuardado]);
+      setNewProducto(initialState);
+      alert('Producto registrado con éxito!');
     } catch (err: any) {
-      alert(`Error: ${err.message}`); // Mostramos un error al usuario
-      // (En una app real, usarías un sistema de notificaciones más elegante)
+      alert(`Error: ${err.message}`);
     }
   };
 
-
-  // --- Renderizado del Componente ---
-  if (isLoading) {
-    return <div className="p-8 text-center">Cargando usuarios...</div>;
-  }
-
-  if (error) {
-    return <div className="p-8 text-center text-red-500">Error: {error}</div>;
-  }
-
+  // --- Renderizado ---
   return (
     <div className="p-8">
-      <h1 className="text-3xl font-bold text-gray-800">Gestión de Usuarios</h1>
-      <p className="mt-2 text-gray-600">
-        Selecciona un empleado de la lista para asignarle o cambiar su rol.
-      </p>
+      <h1 className="text-3xl font-bold text-gray-800">Gestión de Inventario</h1>
+      
+      {/* Formulario para Registrar Productos */}
+      <div className="mt-6 rounded-lg bg-white p-6 shadow-md">
+        <h2 className="text-xl font-semibold">Registrar Entrada de Producto</h2>
+        <form onSubmit={handleSubmit} className="mt-4 grid grid-cols-1 gap-6 md:grid-cols-2">
+          <input name="codigo" value={newProducto.codigo} onChange={handleInputChange} placeholder="Código del Producto" required className="rounded-md border-gray-300 shadow-sm" />
+          <input name="nombre" value={newProducto.nombre} onChange={handleInputChange} placeholder="Nombre del Producto" required className="rounded-md border-gray-300 shadow-sm" />
+          <input name="cantidad" type="number" value={newProducto.cantidad} onChange={handleInputChange} placeholder="Cantidad" required className="rounded-md border-gray-300 shadow-sm" />
+          <input name="stock" type="number" value={newProducto.stock} onChange={handleInputChange} placeholder="Stock Inicial" required className="rounded-md border-gray-300 shadow-sm" />
+          <input name="precio" type="number" step="0.01" value={newProducto.precio} onChange={handleInputChange} placeholder="Precio" required className="rounded-md border-gray-300 shadow-sm" />
+          <input name="proveedor" value={newProducto.proveedor} onChange={handleInputChange} placeholder="Proveedor" className="rounded-md border-gray-300 shadow-sm" />
+          <button type="submit" className="rounded-md bg-blue-500 px-4 py-2 text-white hover:bg-blue-600 md:col-span-2">Registrar Producto</button>
+        </form>
+      </div>
 
-      <div className="mt-6 overflow-x-auto rounded-lg bg-white shadow-md">
-        <table className="min-w-full divide-y divide-gray-200">
-          <thead className="bg-gray-50">
-            <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Nombre</th>
-              <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Email</th>
-              <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Rol Asignado</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-200 bg-white">
-            {usuarios.map(usuario => (
-              <tr key={usuario.id}>
-                <td className="whitespace-nowrap px-6 py-4">{usuario.nombre}</td>
-                <td className="whitespace-nowrap px-6 py-4">{usuario.email}</td>
-                <td className="whitespace-nowrap px-6 py-4">
-                  {/* El desplegable para cambiar el rol */}
-                  <select
-                    value={usuario.rol.id}
-                    onChange={(e) => handleRoleChange(usuario.id, e.target.value)}
-                    className="rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50"
-                  >
-                    {roles.map(rol => (
-                      <option key={rol.id} value={rol.id}>
-                        {rol.nombre}
-                      </option>
-                    ))}
-                  </select>
-                </td>
+      {/* Tabla de Productos Existentes */}
+      <div className="mt-8 overflow-x-auto rounded-lg bg-white shadow-md">
+        <h2 className="p-6 text-xl font-semibold">Listado de Productos</h2>
+        {isLoading ? <p className="p-6">Cargando productos...</p> : error ? <p className="p-6 text-red-500">{error}</p> : (
+          <table className="min-w-full divide-y divide-gray-200">
+            <thead className="bg-gray-50">
+              <tr>
+                <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Código</th>
+                <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Nombre</th>
+                <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Stock</th>
+                <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Precio</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody className="divide-y divide-gray-200 bg-white">
+              {productos.map(producto => (
+                <tr key={producto.id || producto.codigo}>
+                  <td className="whitespace-nowrap px-6 py-4">{producto.codigo}</td>
+                  <td className="whitespace-nowrap px-6 py-4">{producto.nombre}</td>
+                  <td className="whitespace-nowrap px-6 py-4">{producto.stock}</td>
+                  <td className="whitespace-nowrap px-6 py-4">${producto.precio.toFixed(2)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
       </div>
     </div>
   );
 };
 
-export default GestionUsuarios;
+export default GestionProductos;
