@@ -30,6 +30,9 @@ const GestionProductos: React.FC = () => {
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
+  // --- Campos que deben ser numéricos ---
+  const numericFields = ['cantidad', 'precio', 'stock'];
+
   // --- useEffect para Cargar la Lista de Productos ---
   useEffect(() => {
     const fetchProductos = async () => {
@@ -47,14 +50,15 @@ const GestionProductos: React.FC = () => {
       }
     };
     fetchProductos();
-  }, []); // Se ejecuta solo al montar el componente
+  }, []);
 
   // --- Manejadores de Eventos del Formulario ---
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
+
     setNewProducto(prevState => ({
       ...prevState,
-      [name]: name === 'cantidad' || name === 'precio' || name === 'stock' ? parseFloat(value) : value,
+      [name]: numericFields.includes(name) ? parseFloat(value) || 0 : value,
     }));
   };
 
@@ -72,7 +76,7 @@ const GestionProductos: React.FC = () => {
       }
 
       const productoGuardado: Producto = await response.json();
-      
+
       // Actualizamos la lista de productos y reiniciamos el formulario
       setProductos(prevProductos => [...prevProductos, productoGuardado]);
       setNewProducto(initialState);
@@ -82,61 +86,104 @@ const GestionProductos: React.FC = () => {
     }
   };
 
-  
+  // --- Renderizado ---
   return (
     <div className="p-8">
       <h1 className="text-3xl font-bold text-gray-800">Gestión de Inventario</h1>
-      
-      
+
       <div className="mt-6 rounded-lg bg-white p-6 shadow-md">
         <h2 className="text-xl font-semibold">Registrar Entrada de Producto</h2>
         <form onSubmit={handleSubmit} className="mt-4 grid grid-cols-1 gap-6 md:grid-cols-2">
-          <input name="codigo" value={newProducto.codigo} onChange={handleInputChange} placeholder="Código del Producto" required className="rounded-md border-gray-300 shadow-sm" />
-          <input name="nombre" value={newProducto.nombre} onChange={handleInputChange} placeholder="Nombre del Producto" required className="rounded-md border-gray-300 shadow-sm" />
-          <input name="cantidad" type="number" value={newProducto.cantidad} onChange={handleInputChange} placeholder="Cantidad" required className="rounded-md border-gray-300 shadow-sm" />
-          <input name="stock" type="number" value={newProducto.stock} onChange={handleInputChange} placeholder="Stock Inicial" required className="rounded-md border-gray-300 shadow-sm" />
-          <input name="precio" type="number" step="0.01" value={newProducto.precio} onChange={handleInputChange} placeholder="Precio" required className="rounded-md border-gray-300 shadow-sm" />
-          <input name="proveedor" value={newProducto.proveedor} onChange={handleInputChange} placeholder="Proveedor" className="rounded-md border-gray-300 shadow-sm" />
-          <button type="submit" className="rounded-md bg-blue-500 px-4 py-2 text-white hover:bg-blue-600 md:col-span-2">Registrar Producto</button>
+          <input
+            name="codigo"
+            value={newProducto.codigo}
+            onChange={handleInputChange}
+            placeholder="Código del Producto"
+            required
+            className="rounded-md border-gray-300 shadow-sm"
+          />
+          <input
+            name="nombre"
+            value={newProducto.nombre}
+            onChange={handleInputChange}
+            placeholder="Nombre del Producto"
+            required
+            className="rounded-md border-gray-300 shadow-sm"
+          />
+          <input
+            name="cantidad"
+            type="number"
+            value={newProducto.cantidad}
+            onChange={handleInputChange}
+            placeholder="Cantidad"
+            required
+            className="rounded-md border-gray-300 shadow-sm"
+          />
+          <input
+            name="stock"
+            type="number"
+            value={newProducto.stock}
+            onChange={handleInputChange}
+            placeholder="Stock Inicial"
+            required
+            className="rounded-md border-gray-300 shadow-sm"
+          />
+          <input
+            name="precio"
+            type="number"
+            step="0.01"
+            value={newProducto.precio}
+            onChange={handleInputChange}
+            placeholder="Precio"
+            required
+            className="rounded-md border-gray-300 shadow-sm"
+          />
+          <input
+            name="proveedor"
+            value={newProducto.proveedor}
+            onChange={handleInputChange}
+            placeholder="Proveedor"
+            className="rounded-md border-gray-300 shadow-sm"
+          />
+          <button
+            type="submit"
+            className="rounded-md bg-blue-500 px-4 py-2 text-white hover:bg-blue-600 md:col-span-2"
+          >
+            Registrar Producto
+          </button>
         </form>
       </div>
 
-      
       <div className="mt-8 overflow-x-auto rounded-lg bg-white shadow-md">
         <h2 className="p-6 text-xl font-semibold">Listado de Productos</h2>
-        {(() => {
-          if (isLoading) {
-            return <p className="p-6">Cargando productos...</p>;
-          }
-          if (error) {
-            return <p className="p-6 text-red-500">{error}</p>;
-          }
-          return (
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Código</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Nombre</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Stock</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Precio</th>
+        {isLoading ? (
+          <p className="p-6">Cargando productos...</p>
+        ) : error ? (
+          <p className="p-6 text-red-500">{error}</p>
+        ) : (
+          <table className="min-w-full divide-y divide-gray-200">
+            <thead className="bg-gray-50">
+              <tr>
+                <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Código</th>
+                <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Nombre</th>
+                <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Stock</th>
+                <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Precio</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-200 bg-white">
+              {productos.map(producto => (
+                <tr key={producto.id || producto.codigo}>
+                  <td className="whitespace-nowrap px-6 py-4">{producto.codigo}</td>
+                  <td className="whitespace-nowrap px-6 py-4">{producto.nombre}</td>
+                  <td className="whitespace-nowrap px-6 py-4">{producto.stock}</td>
+                  <td className="whitespace-nowrap px-6 py-4">${producto.precio.toFixed(2)}</td>
                 </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-200 bg-white">
-                {productos.map(producto => (
-                  <tr key={producto.id || producto.codigo}>
-                    <td className="whitespace-nowrap px-6 py-4">{producto.codigo}</td>
-                    <td className="whitespace-nowrap px-6 py-4">{producto.nombre}</td>
-                    <td className="whitespace-nowrap px-6 py-4">{producto.stock}</td>
-                    <td className="whitespace-nowrap px-6 py-4">${producto.precio.toFixed(2)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          );
-        })()}
+              ))}
+            </tbody>
+          </table>
+        )}
       </div>
     </div>
   );
 };
-
 export default GestionProductos;
