@@ -4,7 +4,7 @@ import { usuarioService } from '../services/usuarioService';
 import { rolService } from '../services/rolService';
 import { productoService } from '../services/productoService';
 import type { UsuarioResponseDTO } from '../types/usuario/usuario';
-import type { RolResponseDTO } from '../types/rol/rol';
+//import type { RolResponseDTO } from '../types/rol/rol';
 import type { ProductoResponseDTO } from '../types/producto';
 import { Link } from 'react-router-dom';
 import { Layout } from '../components/shared/Layout';
@@ -23,7 +23,7 @@ export const DashboardPage: React.FC = () => {
 
     const [recentUsuarios, setRecentUsuarios] = useState<UsuarioResponseDTO[]>([]);
     const [recentProductos, setRecentProductos] = useState<ProductoResponseDTO[]>([]);
-    const [availableRoles, setAvailableRoles] = useState<RolResponseDTO[]>([]);
+    //const [availableRoles, setAvailableRoles] = useState<RolResponseDTO[]>([]);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
@@ -65,7 +65,7 @@ export const DashboardPage: React.FC = () => {
             // Mostrar últimos 5 usuarios
             setRecentUsuarios(usuariosTodos.slice(0, 5));
             setRecentProductos(productosRecientes.slice(0, 5));
-            setAvailableRoles(rolesActivos.slice(0, 5));
+            //setAvailableRoles(rolesActivos.slice(0, 5));
 
         } catch (error) {
             console.error('Error cargando datos del dashboard:', error);

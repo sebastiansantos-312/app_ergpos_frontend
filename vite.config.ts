@@ -1,8 +1,8 @@
-// 
-
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
+import path from 'node:path'
 
+// https://vite.dev/config/
 export default defineConfig({
   plugins: [
     react({
@@ -11,14 +11,9 @@ export default defineConfig({
       },
     }),
   ],
-  server: {
-    proxy: {
-      '/api': {
-        target: 'http://localhost:8080', // Tu backend en puerto 8080
-        changeOrigin: true,
-        secure: false,
-        rewrite: (path) => path.replace(/^\/api/, '') // Opcional: quita /api si tu backend no lo usa
-      }
-    }
-  }
+  resolve: {
+    alias: {
+      '@': path.resolve(__dirname, './src'),
+    },
+  },
 })
