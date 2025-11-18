@@ -1,12 +1,13 @@
+// components/PublicRoute.tsx
 import React from 'react';
 import { Navigate } from 'react-router-dom';
 import { useAuthStore } from '../stores/authStore';
 
-interface ProtectedRouteProps {
+interface PublicRouteProps {
     children: React.ReactNode;
 }
 
-export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
+export const PublicRoute: React.FC<PublicRouteProps> = ({ children }) => {
     const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
     const isLoading = useAuthStore((state) => state.isLoading);
 
@@ -16,17 +17,16 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
             <div className="min-h-screen flex items-center justify-center">
                 <div className="text-center">
                     <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto"></div>
-                    <p className="mt-4 text-gray-600">Verificando autenticación...</p>
                 </div>
             </div>
         );
     }
 
-    // Si no está autenticado, redirigir al login
-    if (!isAuthenticated) {
-        return <Navigate to="/login" replace />;
+    // Si está autenticado, redirigir al dashboard
+    if (isAuthenticated) {
+        return <Navigate to="/dashboard" replace />;
     }
 
-    // Si está autenticado, mostrar el contenido
+    // Si no está autenticado, mostrar el contenido (login)
     return <>{children}</>;
 };

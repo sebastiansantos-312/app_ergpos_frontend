@@ -1,0 +1,79 @@
+import api from './api';
+import type { LoginRequest, LoginResponse, User } from '../types';
+import { transformBackendUser } from '../types/transformBackendUser';
+
+export const authService = {
+    login: async (credentials: LoginRequest): Promise<LoginResponse> => {
+        try {
+            console.log('🔐 Intentando login con:', credentials);
+
+            const response = await api.post('/auth/login', credentials);
+            const backendData = response.data;
+
+            console.log('✅ Respuesta del login:', backendData);
+
+            // Verificar que el token y user vienen en la respuesta
+            if (!backendData.token) {
+                throw new Error('No se recibió token del servidor');
+            }
+
+            const user: User = transformBackendUser(backendData.user || backendData);
+
+            // Guardar token y usuario en localStorage
+            localStorage.setItem('token', backendData.token);
+            localStorage.setItem('user', JSON.stringify(user));
+
+            console.log('💾 Token guardado:', backendData.token);
+            console.log('💾 User guardado:', user);
+
+            return {
+                token: backendData.token,
+                type: backendData.type || 'Bearer',
+                user
+            };
+        } catch (error: any) {
+            console.error('❌ Error en login:', error);
+            const message =
+                error.response?.data?.message ||
+                error.message ||
+                'Error de conexión al iniciar sesión';
+            throw new Error(message);
+        }
+    },
+
+    getProfile: async (): Promise<User> => {
+        try {
+            const response = await api.get('/usuarios/me/perfil');
+            return transformBackendUser(response.data);
+        } catch (error: any) {
+            const message =
+                error.response?.data?.message ||
+                error.message ||
+                'No se pudo obtener el perfil';
+            throw new Error(message);
+        }
+    },
+
+    refreshToken: async (): Promise<{ token: string }> => {
+        try {
+            const response = await api.post('/auth/refresh');
+            const token = response.data.token;
+            if (!token) throw new Error('Token de refresco inválido');
+
+            localStorage.setItem('token', token);
+            return { token };
+        } catch (error: any) {
+            const message =
+                error.response?.data?.message ||
+                error.message ||
+                'No se pudo refrescar el token';
+            throw new Error(message);
+        }
+    },
+
+    logout: (): void => {
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        console.log('🚪 Sesión cerrada - token y user eliminados');
+    }
+};
