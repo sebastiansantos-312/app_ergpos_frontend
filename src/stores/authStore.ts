@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import type { User, LoginRequest } from '../types';
-import { transformBackendUser } from '../types/transformBackendUser';
+import { authService } from '../services/authService';
+import { z } from 'zod';
 
 interface AuthState {
   user: User | null;
@@ -8,7 +9,6 @@ interface AuthState {
   isAuthenticated: boolean;
   isLoading: boolean;
   error: string | null;
-  initialized: boolean; // Nuevo estado para verificar si ya se inicializó
 }
 
 interface AuthActions {
@@ -21,103 +21,50 @@ interface AuthActions {
   hasAnyRole: (roles: string[]) => boolean;
   hasAllRoles: (roles: string[]) => boolean;
   getUserPermissions: () => any;
-  initializeAuth: () => void; 
 }
 
+// Esquema de login
+export const loginSchema = z.object({
+  username: z.string().min(1, 'El usuario es obligatorio'),
+  password: z.string().min(1, 'La contraseña es obligatoria'),
+});
+
+export type LoginFormData = z.infer<typeof loginSchema>;
+
 export const useAuthStore = create<AuthState & AuthActions>((set, get) => ({
-  // Estado inicial
-  user: null,
-  token: null,
-  isAuthenticated: false,
-  isLoading: true, 
+  user: JSON.parse(localStorage.getItem('user') || 'null'),
+  token: localStorage.getItem('token'),
+  isAuthenticated: !!localStorage.getItem('token'),
+  isLoading: false,
   error: null,
-  initialized: false,
-
-  // Inicializar autenticación al cargar la app
-  initializeAuth: () => {
-    const token = localStorage.getItem('token');
-    const userStr = localStorage.getItem('user');
-
-    if (token && userStr) {
-      try {
-        const user = JSON.parse(userStr);
-        set({
-          user,
-          token,
-          isAuthenticated: true,
-          isLoading: false,
-          initialized: true
-        });
-      } catch (error) {
-        // Si hay error al parsear, limpiar localStorage
-        localStorage.removeItem('token');
-        localStorage.removeItem('user');
-        set({
-          user: null,
-          token: null,
-          isAuthenticated: false,
-          isLoading: false,
-          initialized: true
-        });
-      }
-    } else {
-      set({
-        isLoading: false,
-        initialized: true
-      });
-    }
-  },
 
   login: async (credentials: LoginRequest) => {
     set({ isLoading: true, error: null });
     try {
-      const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
-      if (!API_BASE_URL) throw new Error('URL de la API no configurada');
+      console.log('🔄 Iniciando login con:', credentials);
 
-      const response = await fetch(`${API_BASE_URL}/auth/login`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(credentials),
-      });
+      const response = await authService.login(credentials);
 
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ message: 'Error en el servidor' }));
-        throw new Error(errorData.message || `Error ${response.status}: ${response.statusText}`);
-      }
-
-      const raw = await response.json();
-      const user = transformBackendUser(raw.user);
-      const token = raw.token;
-
-      localStorage.setItem('user', JSON.stringify(user));
-      localStorage.setItem('token', token);
+      console.log('✅ Login exitoso:', response);
 
       set({
-        user,
-        token,
+        user: response.user,
+        token: response.token,
         isAuthenticated: true,
         isLoading: false,
-        error: null,
+        error: null
       });
     } catch (error: any) {
-      set({
-        error: error.message || 'Error de conexión',
-        isLoading: false,
-      });
+      console.error('❌ Error en login:', error);
+      const errorMessage = error.message || 'Error de conexión';
+      set({ error: errorMessage, isLoading: false });
       throw error;
     }
   },
 
   logout: () => {
-    localStorage.removeItem('user');
-    localStorage.removeItem('token');
-    set({
-      user: null,
-      token: null,
-      isAuthenticated: false,
-      error: null,
-      isLoading: false
-    });
+    authService.logout();
+    set({ user: null, token: null, isAuthenticated: false, error: null });
   },
 
   setUser: (user: User) => {

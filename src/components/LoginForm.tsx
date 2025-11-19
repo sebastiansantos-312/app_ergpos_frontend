@@ -38,6 +38,7 @@ const LoginForm: React.FC = () => {
                             type="text"
                             className="appearance-none rounded-md relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
                             placeholder="Código o Email"
+                            autoComplete="username"
                         />
                         {errors.username && <p className="mt-1 text-sm text-red-600">{errors.username.message}</p>}
                     </div>
@@ -49,6 +50,7 @@ const LoginForm: React.FC = () => {
                             type={showPassword ? 'text' : 'password'}
                             className="appearance-none rounded-md relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm pr-10"
                             placeholder="Contraseña"
+                            autoComplete="current-password"
                         />
                         <button
                             type="button"
