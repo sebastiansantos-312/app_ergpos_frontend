@@ -23,7 +23,6 @@ interface AuthActions {
   getUserPermissions: () => any;
 }
 
-// Esquema de login
 export const loginSchema = z.object({
   username: z.string().min(1, 'El usuario es obligatorio'),
   password: z.string().min(1, 'La contraseña es obligatoria'),
@@ -41,11 +40,7 @@ export const useAuthStore = create<AuthState & AuthActions>((set, get) => ({
   login: async (credentials: LoginRequest) => {
     set({ isLoading: true, error: null });
     try {
-      console.log('🔄 Iniciando login con:', credentials);
-
       const response = await authService.login(credentials);
-
-      console.log('✅ Login exitoso:', response);
 
       set({
         user: response.user,
@@ -55,7 +50,6 @@ export const useAuthStore = create<AuthState & AuthActions>((set, get) => ({
         error: null
       });
     } catch (error: any) {
-      console.error('❌ Error en login:', error);
       const errorMessage = error.message || 'Error de conexión';
       set({ error: errorMessage, isLoading: false });
       throw error;

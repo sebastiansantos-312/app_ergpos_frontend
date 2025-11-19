@@ -7,7 +7,6 @@ const api = axios.create({
     },
 });
 
-// Interceptor para agregar el token a las requests
 api.interceptors.request.use(
     (config) => {
         const token = localStorage.getItem('token');
@@ -19,7 +18,6 @@ api.interceptors.request.use(
     (error) => Promise.reject(error)
 );
 
-// Interceptor para manejar respuestas
 api.interceptors.response.use(
     (response) => response,
     (error) => {
@@ -32,4 +30,4 @@ api.interceptors.response.use(
     }
 );
 
-export default api; // ← Mantener como export default
+export default api;

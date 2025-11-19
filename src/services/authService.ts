@@ -5,26 +5,17 @@ import { transformBackendUser } from '../types/transformBackendUser';
 export const authService = {
     login: async (credentials: LoginRequest): Promise<LoginResponse> => {
         try {
-            console.log('🔐 Intentando login con:', credentials);
-
             const response = await api.post('/auth/login', credentials);
             const backendData = response.data;
 
-            console.log('✅ Respuesta del login:', backendData);
-
-            // Verificar que el token y user vienen en la respuesta
             if (!backendData.token) {
                 throw new Error('No se recibió token del servidor');
             }
 
             const user: User = transformBackendUser(backendData.user || backendData);
 
-            // Guardar token y usuario en localStorage
             localStorage.setItem('token', backendData.token);
             localStorage.setItem('user', JSON.stringify(user));
-
-            console.log('💾 Token guardado:', backendData.token);
-            console.log('💾 User guardado:', user);
 
             return {
                 token: backendData.token,
@@ -32,7 +23,6 @@ export const authService = {
                 user
             };
         } catch (error: any) {
-            console.error('❌ Error en login:', error);
             const message =
                 error.response?.data?.message ||
                 error.message ||
@@ -74,6 +64,5 @@ export const authService = {
     logout: (): void => {
         localStorage.removeItem('token');
         localStorage.removeItem('user');
-        console.log('🚪 Sesión cerrada - token y user eliminados');
     }
 };
