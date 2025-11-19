@@ -1,4 +1,3 @@
-// types/movimiento.ts - CORREGIDO
 export interface MovimientoInventarioRequestDTO {
     codigoProducto: string;
     cantidad: number;

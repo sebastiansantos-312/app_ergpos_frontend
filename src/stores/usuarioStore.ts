@@ -39,11 +39,11 @@ export const useUsuarioStore = create<UsuarioState & UsuarioActions>((set) => ({
     isLoading: false,
     error: null,
 
-    // Acciones
+    
     fetchUsuarios: async () => {
         set({ isLoading: true, error: null });
         try {
-            const usuarios = await usuarioService.getUsuarios();
+            const usuarios = await usuarioService.listarTodos();
             set({ usuarios, isLoading: false });
         } catch (error: any) {
             set({ error: error.message, isLoading: false });
@@ -53,7 +53,7 @@ export const useUsuarioStore = create<UsuarioState & UsuarioActions>((set) => ({
     fetchUsuariosActivos: async () => {
         set({ isLoading: true, error: null });
         try {
-            const usuarios = await usuarioService.getUsuariosActivos();
+            const usuarios = await usuarioService.listarActivos(); 
             set({ usuarios, isLoading: false });
         } catch (error: any) {
             set({ error: error.message, isLoading: false });
@@ -63,7 +63,7 @@ export const useUsuarioStore = create<UsuarioState & UsuarioActions>((set) => ({
     fetchUsuariosInactivos: async () => {
         set({ isLoading: true, error: null });
         try {
-            const usuarios = await usuarioService.getUsuariosInactivos();
+            const usuarios = await usuarioService.listarInactivos(); 
             set({ usuarios, isLoading: false });
         } catch (error: any) {
             set({ error: error.message, isLoading: false });
@@ -73,7 +73,7 @@ export const useUsuarioStore = create<UsuarioState & UsuarioActions>((set) => ({
     fetchUsuarioByCodigo: async (codigo: string) => {
         set({ isLoading: true, error: null });
         try {
-            const usuario = await usuarioService.getUsuarioByCodigo(codigo);
+            const usuario = await usuarioService.obtenerPorCodigo(codigo);
             set({ usuarioSeleccionado: usuario, isLoading: false });
         } catch (error: any) {
             set({ error: error.message, isLoading: false });
@@ -83,7 +83,7 @@ export const useUsuarioStore = create<UsuarioState & UsuarioActions>((set) => ({
     fetchMiPerfil: async () => {
         set({ isLoading: true, error: null });
         try {
-            const usuario = await usuarioService.getMiPerfil();
+            const usuario = await usuarioService.obtenerMiPerfil();
             set({ usuarioSeleccionado: usuario, isLoading: false });
         } catch (error: any) {
             set({ error: error.message, isLoading: false });
@@ -103,7 +103,7 @@ export const useUsuarioStore = create<UsuarioState & UsuarioActions>((set) => ({
     crearUsuario: async (usuario: UsuarioRequest) => {
         set({ isLoading: true, error: null });
         try {
-            const nuevoUsuario = await usuarioService.createUsuario(usuario);
+            const nuevoUsuario = await usuarioService.crearUsuario(usuario);
             set(state => ({
                 usuarios: [...state.usuarios, nuevoUsuario],
                 isLoading: false
@@ -117,7 +117,7 @@ export const useUsuarioStore = create<UsuarioState & UsuarioActions>((set) => ({
     actualizarUsuario: async (codigo: string, usuario: UsuarioUpdateRequest) => {
         set({ isLoading: true, error: null });
         try {
-            const usuarioActualizado = await usuarioService.updateUsuario(codigo, usuario);
+            const usuarioActualizado = await usuarioService.actualizarUsuario(codigo, usuario);
             set(state => ({
                 usuarios: state.usuarios.map(u =>
                     u.codigo === codigo ? usuarioActualizado : u
@@ -183,7 +183,7 @@ export const useUsuarioStore = create<UsuarioState & UsuarioActions>((set) => ({
     eliminarUsuario: async (email: string) => {
         set({ isLoading: true, error: null });
         try {
-            await usuarioService.deleteUsuario(email);
+            await usuarioService.desactivarUsuario(email);
             set(state => ({
                 usuarios: state.usuarios.filter(u => u.email !== email),
                 usuarioSeleccionado: state.usuarioSeleccionado?.email === email

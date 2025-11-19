@@ -1,4 +1,3 @@
-// src/types/transformBackendUser.ts
 import type { User } from "./index";
 
 export const transformBackendUser = (backendData: any): User => {
