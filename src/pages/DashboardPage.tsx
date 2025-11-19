@@ -3,9 +3,8 @@ import React, { useState, useEffect } from 'react';
 import { usuarioService } from '../services/usuarioService';
 import { rolService } from '../services/rolService';
 import { productoService } from '../services/productoService';
-import type { UsuarioResponseDTO } from '../types/usuario/usuario';
-//import type { RolResponseDTO } from '../types/rol/rol';
 import type { ProductoResponseDTO } from '../types/producto';
+import type { UsuarioResponseDTO } from '../types/index'; // ← Importación corregida
 import { Link } from 'react-router-dom';
 import { Layout } from '../components/shared/Layout';
 
@@ -21,9 +20,9 @@ export const DashboardPage: React.FC = () => {
         productosInactivos: 0,
     });
 
-    const [recentUsuarios, setRecentUsuarios] = useState<UsuarioResponseDTO[]>([]);
+    const [recentUsuarios, setRecentUsuarios] = useState<UsuarioResponseDTO[]>([]); // ← Descomentado
     const [recentProductos, setRecentProductos] = useState<ProductoResponseDTO[]>([]);
-    //const [availableRoles, setAvailableRoles] = useState<RolResponseDTO[]>([]);
+    //const [availableRoles, setAvailableRoles] = useState<RolResponseDTO[]>([]); // ← Descomentado
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
@@ -63,9 +62,9 @@ export const DashboardPage: React.FC = () => {
             });
 
             // Mostrar últimos 5 usuarios
-            setRecentUsuarios(usuariosTodos.slice(0, 5));
+            setRecentUsuarios(usuariosTodos.slice(0, 5)); // ← Descomentado
             setRecentProductos(productosRecientes.slice(0, 5));
-            //setAvailableRoles(rolesActivos.slice(0, 5));
+            //setAvailableRoles(rolesActivos.slice(0, 5)); // ← Descomentado
 
         } catch (error) {
             console.error('Error cargando datos del dashboard:', error);

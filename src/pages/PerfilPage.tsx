@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { usuarioService } from '../services/usuarioService';
-import type { UsuarioResponseDTO, CambiarPasswordRequestDTO } from '../types/usuario/usuario';
+import type { UsuarioResponseDTO, CambiarPasswordRequestDTO } from '../types/index';
 import { Layout } from '../components/shared/Layout';
-import { CambiarPassword } from '../components/usuarios/CambiarPassword'; // ← IMPORTAR
+import { CambiarPassword } from '../components/usuarios/CambiarPassword';
 
 export const PerfilPage: React.FC = () => {
     const [perfil, setPerfil] = useState<UsuarioResponseDTO | null>(null);
@@ -30,7 +30,7 @@ export const PerfilPage: React.FC = () => {
             alert('Contraseña cambiada exitosamente');
         } catch (error) {
             console.error('Error cambiando contraseña:', error);
-            throw error; // Propagar error para que el componente lo maneje
+            throw error;
         } finally {
             setLoading(false);
         }
