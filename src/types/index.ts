@@ -1,5 +1,5 @@
 export interface LoginRequest {
-    username: string; 
+    username: string;
     password: string;
 }
 
@@ -72,6 +72,32 @@ export interface Rol {
 }
 
 export interface RolResponse {
+    id: string;
+    nombre: string;
+    activo: boolean;
+    createdAt: string;
+    updatedAt: string;
+}
+
+export interface CambiarPasswordRequestDTO {
+    passwordActual: string;
+    nuevoPassword: string;
+}
+
+export interface UsuarioResponseDTO {
+    id: string;
+    codigo: string;
+    nombre: string;
+    email: string;
+    activo: boolean;
+    roles: string[];
+    departamento?: string;
+    puesto?: string;
+    createdAt: string;
+    updatedAt: string;
+}
+
+export interface RolResponseDTO {
     id: string;
     nombre: string;
     activo: boolean;
