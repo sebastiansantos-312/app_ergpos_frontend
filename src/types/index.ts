@@ -5,4 +5,3 @@ export * from './producto';
 export * from './categoria';
 export * from './movimiento';
 export * from './proveedor';
-export * from './dashboard';
