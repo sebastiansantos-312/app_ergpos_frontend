@@ -1,32 +1,36 @@
 import api from './api';
-import type {
-    MovimientoInventarioRequestDTO,
-    MovimientoInventarioResponseDTO
-} from '../types/movimiento';
+import type { MovimientoInventarioRequest, MovimientoInventarioResponse } from '../types/movimiento';
 
 export const movimientoService = {
-    registrarMovimiento: async (request: MovimientoInventarioRequestDTO): Promise<MovimientoInventarioResponseDTO> => {
-        const response = await api.post('/movimientos', request);
-        return response.data;
+    async crearMovimiento(movimiento: MovimientoInventarioRequest): Promise<MovimientoInventarioResponse> {
+        const { data } = await api.post<MovimientoInventarioResponse>('/movimientos', movimiento);
+        return data;
     },
 
-    listarTodos: async (): Promise<MovimientoInventarioResponseDTO[]> => {
-        try {
-            const response = await api.get('/movimientos');
-            return response.data;
-        } catch (error) {
-            console.error('Error en listarTodos:', error);
-            throw error;
-        }
+    async listarMovimientos(filtros?: {
+        producto?: string;
+        tipo?: string;
+        estado?: string;
+        usuario?: string;
+        proveedor?: string;
+        
+    }): Promise<MovimientoInventarioResponse[]> {
+        const { data } = await api.get<MovimientoInventarioResponse[]>('/movimientos', { params: filtros });
+        return data;
     },
 
-    listarPorProducto: async (codigo: string): Promise<MovimientoInventarioResponseDTO[]> => {
-        try {
-            const response = await api.get(`/movimientos/producto/${codigo}`);
-            return response.data;
-        } catch (error) {
-            console.error('Error en listarPorProducto:', error);
-            throw error;
-        }
+    async obtenerMovimiento(id: string): Promise<MovimientoInventarioResponse> {
+        const { data } = await api.get<MovimientoInventarioResponse>(`/movimientos/${id}`);
+        return data;
     },
+
+    async anularMovimiento(id: string): Promise<MovimientoInventarioResponse> {
+        const { data } = await api.patch<MovimientoInventarioResponse>(`/movimientos/${id}/anular`);
+        return data;
+    },
+
+    async activarMovimiento(id: string): Promise<MovimientoInventarioResponse> {
+        const { data } = await api.patch<MovimientoInventarioResponse>(`/movimientos/${id}/activar`);
+        return data;
+    }
 };

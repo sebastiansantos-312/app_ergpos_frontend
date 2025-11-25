@@ -1,52 +1,38 @@
 import api from './api';
-
-import type { ProductoRequestDTO, ProductoResponseDTO, ProductoEstadisticas } from '../types/producto';
-
+import type { ProductoRequest, ProductoResponse } from '../types/producto';
 
 export const productoService = {
-    listarProductos: async (activo?: boolean): Promise<ProductoResponseDTO[]> => {
-        const params = activo !== undefined ? { activo } : {};
-        const response = await api.get('/productos', { params });
-        return response.data;
+    async crearProducto(producto: ProductoRequest): Promise<ProductoResponse> {
+        const { data } = await api.post<ProductoResponse>('/productos', producto);
+        return data;
     },
 
-    buscarPorCodigo: async (codigo: string): Promise<ProductoResponseDTO> => {
-        const response = await api.get(`/productos/codigo/${codigo}`);
-        return response.data;
+    async listarProductos(filtros?: {
+        buscar?: string;
+        categoria?: string;
+        activo?: boolean
+    }): Promise<ProductoResponse[]> {
+        const { data } = await api.get<ProductoResponse[]>('/productos', { params: filtros });
+        return data;
     },
 
-    buscarPorNombre: async (nombre: string): Promise<ProductoResponseDTO[]> => {
-        const response = await api.get('/productos/buscar', { params: { nombre } });
-        return response.data;
+    async obtenerPorCodigo(codigo: string): Promise<ProductoResponse> {
+        const { data } = await api.get<ProductoResponse>(`/productos/${codigo}`);
+        return data;
     },
 
-    crearProducto: async (request: ProductoRequestDTO): Promise<ProductoResponseDTO> => {
-        const response = await api.post('/productos', request);
-        return response.data;
+    async actualizarProducto(codigo: string, producto: ProductoRequest): Promise<ProductoResponse> {
+        const { data } = await api.put<ProductoResponse>(`/productos/${codigo}`, producto);
+        return data;
     },
 
-    actualizarProducto: async (codigo: string, request: ProductoRequestDTO): Promise<ProductoResponseDTO> => {
-        const response = await api.put(`/productos/codigo/${codigo}`, request);
-        return response.data;
+    async activarProducto(codigo: string): Promise<ProductoResponse> {
+        const { data } = await api.patch<ProductoResponse>(`/productos/${codigo}/activar`);
+        return data;
     },
 
-    activarProducto: async (codigo: string): Promise<ProductoResponseDTO> => {
-        const response = await api.put(`/productos/codigo/${codigo}/activar`);
-        return response.data;
-    },
-
-    desactivarProducto: async (codigo: string): Promise<ProductoResponseDTO> => {
-        const response = await api.put(`/productos/codigo/${codigo}/desactivar`);
-        return response.data;
-    },
-
-    obtenerEstadisticas: async (): Promise<ProductoEstadisticas> => {
-        const response = await api.get('/productos/estadisticas');
-        return response.data;
-    },
-
-    productosRecientes: async (): Promise<ProductoResponseDTO[]> => {
-        const response = await api.get('/productos/recientes');
-        return response.data;
-    },
+    async desactivarProducto(codigo: string): Promise<ProductoResponse> {
+        const { data } = await api.patch<ProductoResponse>(`/productos/${codigo}/desactivar`);
+        return data;
+    }
 };

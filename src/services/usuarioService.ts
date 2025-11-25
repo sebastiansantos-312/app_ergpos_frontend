@@ -1,55 +1,59 @@
 import api from './api';
 import type {
-    Usuario,
-    UsuarioRequest,
+    UsuarioCreateRequest,
     UsuarioUpdateRequest,
+    UsuarioResponse,
     CambiarPasswordRequest
-} from '../types';
+} from '../types/usuario';
+
+// ✅ Interfaz para los parámetros de filtrado
+interface UsuarioFiltros {
+    nombre?: string;
+    email?: string;
+    rol?: string;
+    activo?: boolean;
+}
 
 export const usuarioService = {
-    // Listar usuarios
-    listarTodos: (): Promise<Usuario[]> =>
-        api.get('/usuarios').then(res => res.data),
+    // ✅ CORREGIDO: Ahora acepta todos los filtros que el backend espera
+    listar: async (params?: UsuarioFiltros) => {
+        const { data } = await api.get<UsuarioResponse[]>('/usuarios', { params });
+        return data;
+    },
 
-    listarActivos: (): Promise<Usuario[]> =>
-        api.get('/usuarios/activos').then(res => res.data),
+    // Obtener usuario por email
+    obtenerPorEmail: async (email: string) => {
+        const { data } = await api.get<UsuarioResponse>(`/usuarios/${email}`);
+        return data;
+    },
 
-    listarInactivos: (): Promise<Usuario[]> =>
-        api.get('/usuarios/inactivos').then(res => res.data),
+    // Crear usuario
+    crearUsuario: async (usuario: UsuarioCreateRequest) => {
+        const { data } = await api.post<UsuarioResponse>('/usuarios', usuario);
+        return data;
+    },
 
-    // CRUD usuarios
-    crearUsuario: (usuario: UsuarioRequest): Promise<Usuario> =>
-        api.post('/usuarios', usuario).then(res => res.data),
+    // Actualizar usuario
+    actualizarUsuario: async (email: string, usuario: UsuarioUpdateRequest) => {
+        const { data } = await api.put<UsuarioResponse>(`/usuarios/${email}`, usuario);
+        return data;
+    },
 
-    actualizarUsuario: (codigo: string, usuario: UsuarioUpdateRequest): Promise<Usuario> =>
-        api.put(`/usuarios/${codigo}`, usuario).then(res => res.data),
+    // Activar usuario
+    activarUsuario: async (email: string) => {
+        const { data } = await api.patch<UsuarioResponse>(`/usuarios/${email}/activar`);
+        return data;
+    },
 
-    desactivarUsuario: (email: string): Promise<Usuario> =>
-        api.put(`/usuarios/email/${email}/desactivar`).then(res => res.data),
+    // Desactivar usuario
+    desactivarUsuario: async (email: string) => {
+        const { data } = await api.patch<UsuarioResponse>(`/usuarios/${email}/desactivar`);
+        return data;
+    },
 
-    activarUsuario: (email: string): Promise<Usuario> =>
-        api.put(`/usuarios/email/${email}/activar`).then(res => res.data),
-
-    // Perfil y contraseña
-    obtenerMiPerfil: (): Promise<Usuario> =>
-        api.get('/usuarios/me/perfil').then(res => res.data),
-
-    obtenerPorCodigo: (codigo: string): Promise<Usuario> =>
-        api.get(`/usuarios/codigo/${codigo}`).then(res => res.data),
-
-    cambiarPassword: (request: CambiarPasswordRequest): Promise<void> =>
-        api.put('/usuarios/me/cambiar-password', request).then(res => res.data),
-
-    // Búsqueda
-    buscarUsuarios: (filters: {
-        nombre?: string;
-        email?: string;
-        departamento?: string;
-        puesto?: string;
-    }): Promise<Usuario[]> =>
-        api.get('/usuarios/buscar', { params: filters }).then(res => res.data),
-
-    // Roles - CORREGIDO: eliminar RolCambioRequest y usar directamente
-    cambiarRoles: (email: string, roles: string[]): Promise<Usuario> =>
-        api.put(`/usuarios/${email}/roles`, { roles }).then(res => res.data),
+    // Cambiar contraseña
+    cambiarPassword: async (email: string, passwords: CambiarPasswordRequest) => {
+        const { data } = await api.patch(`/usuarios/${email}/cambiar-password`, passwords);
+        return data;
+    },
 };

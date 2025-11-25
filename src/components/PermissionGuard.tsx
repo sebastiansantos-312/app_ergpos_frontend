@@ -1,115 +1,44 @@
 import React from 'react';
-import { useAuth } from '../hooks/useAuth';
+import { Navigate } from 'react-router-dom';
+import { useAuthStore } from '../stores/authStore';
 
 interface PermissionGuardProps {
     children: React.ReactNode;
-    requiredPermission?: keyof ReturnType<typeof useAuth>['permissions'];
-    requiredRole?: 'isSuperAdmin' | 'isAdministrador' | 'isGerente' | 'isAlmacenista' | 'isContador' | 'isVendedor' | 'isAuditor';
-    requireAll?: boolean; 
-    fallback?: React.ReactNode;
+    requiredModules?: string[];
 }
 
 export const PermissionGuard: React.FC<PermissionGuardProps> = ({
     children,
-    requiredPermission,
-    requiredRole,
-    requireAll = false,
-    fallback = null
+    requiredModules = []
 }) => {
-    const auth = useAuth();
+    const { user } = useAuthStore();
 
-    // Si no se especifica ningún requisito, mostrar el contenido por defecto
-    if (!requiredPermission && !requiredRole) {
-        return <>{children}</>;
+    if (!user) {
+        return <Navigate to="/login" replace />;
     }
 
-    let hasPermission = false;
+    if (requiredModules.length > 0) {
+        const hasPermission = requiredModules.some(module =>
+            user.modules.includes(module)
+        );
 
-    // Verificar permisos específicos
-    if (requiredPermission) {
-        hasPermission = auth.permissions[requiredPermission] || false;
-    }
-
-    // Verificar roles específicos
-    if (requiredRole) {
-        const roleValue = auth[requiredRole] || false;
-
-        if (requireAll && requiredPermission) {
-            // Requiere AMBOS: el permiso Y el rol
-            hasPermission = hasPermission && roleValue;
-        } else {
-            // Requiere AL MENOS UNO: el permiso O el rol
-            hasPermission = hasPermission || roleValue;
+        if (!hasPermission) {
+            return (
+                <div className="min-h-screen flex items-center justify-center bg-gray-50">
+                    <div className="text-center space-y-4">
+                        <h1 className="text-4xl font-bold text-gray-800">Acceso Denegado</h1>
+                        <p className="text-gray-600">No tienes permisos para acceder a esta página</p>
+                        <a
+                            href="/dashboard"
+                            className="inline-block px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                        >
+                            Volver al Dashboard
+                        </a>
+                    </div>
+                </div>
+            );
         }
     }
 
-    // Si tiene permisos, mostrar el contenido
-    if (hasPermission) {
-        return <>{children}</>;
-    }
-
-    // Si no tiene permisos, mostrar el fallback (o nada)
-    return <>{fallback}</>;
-};
-
-// Componente adicional para múltiples permisos
-interface MultiplePermissionGuardProps {
-    children: React.ReactNode;
-    requiredPermissions?: Array<keyof ReturnType<typeof useAuth>['permissions']>;
-    requiredRoles?: Array<'isSuperAdmin' | 'isAdministrador' | 'isGerente' | 'isAlmacenista' | 'isContador' | 'isVendedor' | 'isAuditor'>;
-    requireAll?: boolean;
-    fallback?: React.ReactNode;
-}
-
-export const MultiplePermissionGuard: React.FC<MultiplePermissionGuardProps> = ({
-    children,
-    requiredPermissions = [],
-    requiredRoles = [],
-    requireAll = false,
-    fallback = null
-}) => {
-    const auth = useAuth();
-
-    let hasPermission = false;
-
-    if (requireAll) {
-        // Requiere TODOS los permisos Y TODOS los roles
-        const allPermissions = requiredPermissions.every(
-            permission => auth.permissions[permission]
-        );
-        const allRoles = requiredRoles.every(
-            role => auth[role]
-        );
-        hasPermission = allPermissions && allRoles;
-    } else {
-        // Requiere AL MENOS UN permiso O AL MENOS UN rol
-        const somePermissions = requiredPermissions.some(
-            permission => auth.permissions[permission]
-        );
-        const someRoles = requiredRoles.some(
-            role => auth[role]
-        );
-        hasPermission = somePermissions || someRoles;
-    }
-
-    if (hasPermission) {
-        return <>{children}</>;
-    }
-
-    return <>{fallback}</>;
-};
-
-// HOC (Higher Order Component) para proteger componentes completos
-export const withPermission = <P extends object>(
-    Component: React.ComponentType<P>,
-    requiredPermission?: keyof ReturnType<typeof useAuth>['permissions'],
-    requiredRole?: 'isSuperAdmin' | 'isAdministrador' | 'isGerente' | 'isAlmacenista' | 'isContador' | 'isVendedor' | 'isAuditor'
-) => {
-    return (props: P) => {
-        return (
-            <PermissionGuard requiredPermission={requiredPermission} requiredRole={requiredRole}>
-                <Component {...props} />
-            </PermissionGuard>
-        );
-    };
+    return <>{children}</>;
 };
