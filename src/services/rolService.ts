@@ -1,25 +1,34 @@
-// rolService.ts - CORREGIDO
 import api from './api';
-import type { Rol } from '../types';
-
-// Para crear rol necesitamos definir el request
-interface RolRequest {
-    nombre: string;
-}
+import type { RolRequest, RolResponse } from '../types/rol';
 
 export const rolService = {
-    listarActivos: (): Promise<Rol[]> =>
-        api.get('/roles').then(res => res.data),
+    async crearRol(rol: RolRequest): Promise<RolResponse> {
+        const { data } = await api.post<RolResponse>('/roles', rol);
+        return data;
+    },
 
-    listarInactivos: (): Promise<Rol[]> =>
-        api.get('/roles/inactivos').then(res => res.data),
+    async listarRoles(filtros?: { buscar?: string; activo?: boolean }): Promise<RolResponse[]> {
+        const { data } = await api.get<RolResponse[]>('/roles', { params: filtros });
+        return data;
+    },
 
-    crearRol: (rol: RolRequest): Promise<Rol> =>
-        api.post('/roles', rol).then(res => res.data),
+    async obtenerPorNombre(nombre: string): Promise<RolResponse> {
+        const { data } = await api.get<RolResponse>(`/roles/${nombre}`);
+        return data;
+    },
 
-    activarRol: (nombre: string): Promise<Rol> =>
-        api.put(`/roles/${nombre}/activar`).then(res => res.data),
+    async actualizarRol(nombre: string, rol: RolRequest): Promise<RolResponse> {
+        const { data } = await api.put<RolResponse>(`/roles/${nombre}`, rol);
+        return data;
+    },
 
-    desactivarRol: (nombre: string): Promise<Rol> =>
-        api.put(`/roles/${nombre}/desactivar`).then(res => res.data),
+    async activarRol(nombre: string): Promise<RolResponse> {
+        const { data } = await api.patch<RolResponse>(`/roles/${nombre}/activar`);
+        return data;
+    },
+
+    async desactivarRol(nombre: string): Promise<RolResponse> {
+        const { data } = await api.patch<RolResponse>(`/roles/${nombre}/desactivar`);
+        return data;
+    }
 };

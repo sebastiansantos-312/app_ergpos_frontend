@@ -1,40 +1,22 @@
 import { create } from 'zustand';
-import type { User, LoginRequest } from '../types';
 import { authService } from '../services/authService';
-import { z } from 'zod';
+import type { LoginRequest, UserInfo } from '../types/auth';
 
 interface AuthState {
-  user: User | null;
-  token: string | null;
-  isAuthenticated: boolean;
+  user: UserInfo | null;
   isLoading: boolean;
+  isAuthenticated: boolean;
   error: string | null;
-}
-
-interface AuthActions {
   login: (credentials: LoginRequest) => Promise<void>;
-  logout: () => void;
-  setUser: (user: User) => void;
-  setToken: (token: string) => void;
+  logout: () => Promise<void>;
+  loadUser: () => Promise<void>;
   clearError: () => void;
-  hasRole: (role: string) => boolean;
-  hasAnyRole: (roles: string[]) => boolean;
-  hasAllRoles: (roles: string[]) => boolean;
-  getUserPermissions: () => any;
 }
 
-export const loginSchema = z.object({
-  username: z.string().min(1, 'El usuario es obligatorio'),
-  password: z.string().min(1, 'La contraseña es obligatoria'),
-});
-
-export type LoginFormData = z.infer<typeof loginSchema>;
-
-export const useAuthStore = create<AuthState & AuthActions>((set, get) => ({
-  user: JSON.parse(localStorage.getItem('user') || 'null'),
-  token: localStorage.getItem('token'),
-  isAuthenticated: !!localStorage.getItem('token'),
+export const useAuthStore = create<AuthState>((set) => ({
+  user: null,
   isLoading: false,
+  isAuthenticated: false,
   error: null,
 
   login: async (credentials: LoginRequest) => {
@@ -42,52 +24,98 @@ export const useAuthStore = create<AuthState & AuthActions>((set, get) => ({
     try {
       const response = await authService.login(credentials);
 
+      if (!response.activo) {
+        set({
+          error: 'Tu cuenta está inactiva. Contacta al administrador.',
+          isLoading: false,
+          isAuthenticated: false,
+          user: null
+        });
+
+        // No guardar nada en localStorage
+        return;
+      }
+      // Guardar token
+      localStorage.setItem('token', response.token);
+      localStorage.setItem('usuarioId', response.usuarioId);
+
+      // Cargar información completa del usuario
+      const userInfo = await authService.getCurrentUser();
+      localStorage.setItem('user', JSON.stringify(userInfo));
+      
+      if (!userInfo.activo) {
+        // Limpiar localStorage
+        localStorage.removeItem('token');
+        localStorage.removeItem('usuarioId');
+
+        set({
+          error: 'Tu cuenta fue desactivada recientemente. Contacta al administrador.',
+          isLoading: false,
+          isAuthenticated: false,
+          user: null
+        });
+        return;
+      }
       set({
-        user: response.user,
-        token: response.token,
-        isAuthenticated: true,
+        user: userInfo,
         isLoading: false,
+        isAuthenticated: true,
         error: null
       });
     } catch (error: any) {
-      const errorMessage = error.message || 'Error de conexión';
-      set({ error: errorMessage, isLoading: false });
+      const errorMessage = error.response?.data?.message || error.message || 'Error en el login';
+      set({
+        error: errorMessage,
+        isLoading: false,
+        isAuthenticated: false,
+        user: null
+      });
       throw error;
     }
   },
 
-  logout: () => {
-    authService.logout();
-    set({ user: null, token: null, isAuthenticated: false, error: null });
+  logout: async () => {
+    try {
+      await authService.logout();
+    } catch (error) {
+      console.error('Error durante logout:', error);
+    } finally {
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+      localStorage.removeItem('usuarioId');
+      set({
+        user: null,
+        isAuthenticated: false,
+        error: null
+      });
+    }
   },
 
-  setUser: (user: User) => {
-    set({ user });
-    localStorage.setItem('user', JSON.stringify(user));
-  },
+  loadUser: async () => {
+    if (!authService.isAuthenticated()) {
+      set({ isAuthenticated: false, user: null });
+      return;
+    }
 
-  setToken: (token: string) => {
-    set({ token });
-    localStorage.setItem('token', token);
+    set({ isLoading: true });
+    try {
+      const userInfo = await authService.getCurrentUser();
+      set({
+        user: userInfo,
+        isLoading: false,
+        isAuthenticated: true,
+        error: null
+      });
+    } catch (error) {
+      authService.logout();
+      set({
+        user: null,
+        isLoading: false,
+        isAuthenticated: false,
+        error: 'Sesión expirada. Por favor inicia sesión nuevamente'
+      });
+    }
   },
 
   clearError: () => set({ error: null }),
-
-  hasRole: (role: string) => get().user?.roles.includes(role) || false,
-  hasAnyRole: (roles: string[]) => roles.some(role => get().user?.roles.includes(role)) || false,
-  hasAllRoles: (roles: string[]) => roles.every(role => get().user?.roles.includes(role)) || false,
-
-  getUserPermissions: () => {
-    const { hasRole } = get();
-    return {
-      canManageUsers: hasRole('SUPER_ADMIN') || hasRole('ADMINISTRADOR'),
-      canManageSystem: hasRole('SUPER_ADMIN'),
-      canManageInventory: hasRole('SUPER_ADMIN') || hasRole('ADMINISTRADOR') || hasRole('ALMACENISTA'),
-      canEditProducts: hasRole('SUPER_ADMIN') || hasRole('ADMINISTRADOR') || hasRole('ALMACENISTA'),
-      canManageFinancials: hasRole('SUPER_ADMIN') || hasRole('ADMINISTRADOR') || hasRole('CONTADOR'),
-      canViewFinancials: hasRole('SUPER_ADMIN') || hasRole('ADMINISTRADOR') || hasRole('CONTADOR') || hasRole('GERENTE'),
-      canManageSales: hasRole('SUPER_ADMIN') || hasRole('ADMINISTRADOR') || hasRole('VENDEDOR'),
-      canManageAudit: hasRole('SUPER_ADMIN') || hasRole('ADMINISTRADOR') || hasRole('AUDITOR'),
-    };
-  },
 }));

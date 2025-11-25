@@ -1,356 +1,442 @@
-// UsuariosPage.tsx - VERSIÓN COMPLETA CORREGIDA
-import React, { useState, useEffect } from 'react';
-import { UsuarioForm } from '../components/usuarios/UsuarioForm';
-import { UsuarioList } from '../components/usuarios/UsuarioList';
-import { RolEditor } from '../components/usuarios/RolEditor';
+import React, { useEffect, useState } from 'react';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { AppLayout } from '../components/AppLayout';
+import { useUsuarioStore } from '../stores/usuarioStore';
+import { useRolStore } from '../stores/rolStore';
+import { useAuthStore } from '../stores/authStore';
+import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
+import { Button } from '../components/ui/button';
+import { Input } from '../components/ui/input';
+import { DataTable } from '../components/DataTable';
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from '../components/ui/dialog';
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '../components/ui/select';
+import { usuarioCreateSchema, type UsuarioCreateFormData } from '../schema';
+import { toast } from 'react-toastify';
+import { Plus, Search, Mail, Power, PowerOff, Shield } from 'lucide-react';
+import type { UsuarioResponse } from '../types/usuario';
 import { usuarioService } from '../services/usuarioService';
-import { Layout } from '../components/shared/Layout';
-import type { Usuario, UsuarioRequest } from '../types';
 
 export const UsuariosPage: React.FC = () => {
-    const [usuarios, setUsuarios] = useState<Usuario[]>([]);
-    const [usuariosFiltrados, setUsuariosFiltrados] = useState<Usuario[]>([]);
-    const [showForm, setShowForm] = useState(false);
-    const [editingUsuario, setEditingUsuario] = useState<Usuario | undefined>();
-    const [editingRolesUsuario, setEditingRolesUsuario] = useState<Usuario | undefined>();
-    const [loading, setLoading] = useState(true);
+    const {
+        usuarios,
+        isLoading,
+        cargarUsuarios,
+    } = useUsuarioStore();
 
-    // Estados para búsqueda y filtros
-    const [filtroNombre, setFiltroNombre] = useState('');
-    const [filtroEmail, setFiltroEmail] = useState('');
-    const [filtroDepartamento, setFiltroDepartamento] = useState('');
-    const [filtroPuesto, setFiltroPuesto] = useState('');
-    const [filtroEstado, setFiltroEstado] = useState<'todos' | 'activos' | 'inactivos'>('todos');
+    const { roles, cargarRoles } = useRolStore();
+    const { user: currentUser } = useAuthStore();
 
-    const loadUsuarios = async () => {
-        try {
-            setLoading(true);
-            const data = await usuarioService.listarTodos();
-            setUsuarios(data);
-            setUsuariosFiltrados(data);
-        } catch (error) {
-            console.error('Error cargando usuarios:', error);
-        } finally {
-            setLoading(false);
-        }
-    };
+    const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+    const [searchTerm, setSearchTerm] = useState('');
+    const [filterActivo, setFilterActivo] = useState<boolean | undefined>(undefined);
+    const [usuarioParaDesactivar, setUsuarioParaDesactivar] = useState<UsuarioResponse | null>(null);
+    const [showConfirmDialog, setShowConfirmDialog] = useState(false);
+    const {
+        register,
+        handleSubmit,
+        reset,
+        watch,
+        setValue,
+        formState: { errors, isSubmitting },
+    } = useForm<UsuarioCreateFormData>({
+        resolver: zodResolver(usuarioCreateSchema),
+    });
 
-    // Cargar por estado específico
-    const cargarPorEstado = async (estado: 'activos' | 'inactivos') => {
-        try {
-            setLoading(true);
-            const data = estado === 'activos'
-                ? await usuarioService.listarActivos()
-                : await usuarioService.listarInactivos();
-            setUsuariosFiltrados(data);
-        } catch (error) {
-            console.error(`Error cargando usuarios ${estado}:`, error);
-            // Si falla, volver a cargar todos
-            await loadUsuarios();
-        } finally {
-            setLoading(false);
-        }
-    };
+    const selectedRol = watch('nombreRol');
 
+    // Cargar datos al montar
     useEffect(() => {
-        loadUsuarios();
-    }, []);
+        cargarUsuarios();
+        cargarRoles();
+    }, [cargarUsuarios, cargarRoles]);
 
-    // Aplicar filtros cuando cambien los valores
-    useEffect(() => {
-        aplicarFiltros();
-    }, [usuarios, filtroNombre, filtroEmail, filtroDepartamento, filtroPuesto, filtroEstado]);
+    // Filtrar usuarios
+    const filteredUsuarios = usuarios.filter((usr) => {
+        const matchesSearch =
+            searchTerm === '' ||
+            usr.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            usr.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            usr.codigo.toLowerCase().includes(searchTerm.toLowerCase());
 
-    const aplicarFiltros = () => {
-        let resultados = [...usuarios];
+        const matchesFilter =
+            filterActivo === undefined ||
+            usr.activo === filterActivo;
 
-        // Filtro por nombre
-        if (filtroNombre) {
-            resultados = resultados.filter(usuario =>
-                usuario.nombre.toLowerCase().includes(filtroNombre.toLowerCase())
-            );
+        return matchesSearch && matchesFilter;
+    });
+
+    // Submit crear usuario
+    const onSubmit = async (data: UsuarioCreateFormData) => {
+        try {
+            await usuarioService.crearUsuario(data);
+            toast.success('Usuario creado correctamente');
+            reset();
+            setIsCreateDialogOpen(false);
+            await cargarUsuarios();
+        } catch (error: any) {
+            const message = error.response?.data?.message || 'Error al crear el usuario';
+            toast.error(message);
         }
-
-        // Filtro por email
-        if (filtroEmail) {
-            resultados = resultados.filter(usuario =>
-                usuario.email.toLowerCase().includes(filtroEmail.toLowerCase())
-            );
-        }
-
-        // Filtro por departamento
-        if (filtroDepartamento) {
-            resultados = resultados.filter(usuario =>
-                usuario.departamento?.toLowerCase().includes(filtroDepartamento.toLowerCase())
-            );
-        }
-
-        // Filtro por puesto
-        if (filtroPuesto) {
-            resultados = resultados.filter(usuario =>
-                usuario.puesto?.toLowerCase().includes(filtroPuesto.toLowerCase())
-            );
-        }
-
-        // Filtro por estado - si es "todos" no filtra, si es específico carga del servidor
-        if (filtroEstado === 'activos' || filtroEstado === 'inactivos') {
-            // Para filtros de estado, usamos los endpoints específicos
-            cargarPorEstado(filtroEstado);
-            return; // Salimos porque cargarPorEstado actualizará usuariosFiltrados
-        }
-
-        setUsuariosFiltrados(resultados);
     };
 
-    const handleBuscarUsuarios = async () => {
+    const handleActivate = async (usuario: UsuarioResponse) => {
         try {
-            setLoading(true);
-            const data = await usuarioService.buscarUsuarios({
-                nombre: filtroNombre || undefined,
-                email: filtroEmail || undefined,
-                departamento: filtroDepartamento || undefined,
-                puesto: filtroPuesto || undefined
-            });
-            setUsuariosFiltrados(data);
-        } catch (error) {
-            console.error('Error buscando usuarios:', error);
+            await usuarioService.activarUsuario(usuario.email);
+            toast.success('Usuario activado');
+            await cargarUsuarios();
+        } catch (error: any) {
+            toast.error(error.response?.data?.message || 'Error al activar');
+        }
+    };
+
+    const handleDeactivate = async (usuario: UsuarioResponse) => {
+        // Validar si es el mismo usuario
+        if (currentUser && usuario.email === currentUser.email) {
+            toast.error('No puedes desactivar tu propia cuenta');
+            return;
+        }
+
+        setUsuarioParaDesactivar(usuario);
+        setShowConfirmDialog(true);
+    };
+
+    const confirmDeactivate = async () => {
+        if (!usuarioParaDesactivar) return;
+
+        try {
+            await usuarioService.desactivarUsuario(usuarioParaDesactivar.email);
+            toast.success('Usuario desactivado');
+            await cargarUsuarios();
+        } catch (error: any) {
+            toast.error(error.response?.data?.message || 'Error al desactivar');
         } finally {
-            setLoading(false);
+            setShowConfirmDialog(false);
+            setUsuarioParaDesactivar(null);
         }
     };
 
-    const limpiarFiltros = async () => {
-        setFiltroNombre('');
-        setFiltroEmail('');
-        setFiltroDepartamento('');
-        setFiltroPuesto('');
-        setFiltroEstado('todos');
-        // Recargar todos los usuarios
-        await loadUsuarios();
+    const handleCloseDialog = () => {
+        setIsCreateDialogOpen(false);
+        reset();
     };
-
-    const handleCreateUsuario = async (usuarioData: UsuarioRequest) => {
-        try {
-            await usuarioService.crearUsuario(usuarioData);
-            await loadUsuarios();
-            setShowForm(false);
-        } catch (error) {
-            console.error('Error creando usuario:', error);
-            throw error;
-        }
-    };
-
-    const handleUpdateUsuario = async (usuarioData: UsuarioRequest) => {
-        if (!editingUsuario?.codigo) return;
-
-        try {
-            await usuarioService.actualizarUsuario(editingUsuario.codigo, usuarioData);
-            await loadUsuarios();
-            setEditingUsuario(undefined);
-        } catch (error) {
-            console.error('Error actualizando usuario:', error);
-            throw error;
-        }
-    };
-
-    const handleToggleStatus = async (usuario: Usuario) => {
-        try {
-            if (usuario.activo) {
-                await usuarioService.desactivarUsuario(usuario.email);
-            } else {
-                await usuarioService.activarUsuario(usuario.email);
-            }
-            await loadUsuarios();
-        } catch (error) {
-            console.error('Error cambiando estado:', error);
-            throw error;
-        }
-    };
-
-    const handleEditRoles = async (usuario: Usuario, nuevosRoles: string[]) => {
-        try {
-            await usuarioService.cambiarRoles(usuario.email, nuevosRoles);
-            await loadUsuarios();
-            setEditingRolesUsuario(undefined);
-        } catch (error) {
-            console.error('Error actualizando roles:', error);
-            throw error;
-        }
-    };
-
-    if (loading && usuarios.length === 0) {
-        return (
-            <Layout>
-                <div className="container mx-auto p-4">
-                    <div className="flex justify-center items-center h-64">
-                        <div className="text-lg">Cargando usuarios...</div>
-                    </div>
-                </div>
-            </Layout>
-        );
-    }
 
     return (
-        <Layout>
-            <div className="container mx-auto p-4">
-                <div className="flex justify-between items-center mb-6">
-                    <h1 className="text-2xl font-bold">Gestión de Usuarios</h1>
-                    <button
-                        onClick={() => setShowForm(true)}
-                        className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
+        <AppLayout>
+            <div className="space-y-6">
+                {/* Header */}
+                <div className="flex justify-between items-center">
+                    <div>
+                        <h1 className="text-3xl font-bold text-gray-900">Gestionar Usuarios</h1>
+                        <p className="text-gray-600 mt-1">
+                            Total: <span className="font-semibold">{filteredUsuarios.length}</span> usuarios
+                        </p>
+                    </div>
+                    <Button
+                        onClick={() => {
+                            reset();
+                            setIsCreateDialogOpen(true);
+                        }}
+                        className="bg-blue-600 hover:bg-blue-700 text-white flex items-center gap-2"
                     >
+                        <Plus className="w-4 h-4" />
                         Nuevo Usuario
-                    </button>
+                    </Button>
                 </div>
 
-                {/* Panel de Búsqueda y Filtros */}
-                <div className="bg-white rounded-lg shadow p-6 mb-6">
-                    <h2 className="text-lg font-semibold mb-4">Buscar y Filtrar Usuarios</h2>
+                {/* Filtros */}
+                <Card>
+                    <CardContent className="pt-6">
+                        <div className="flex gap-4 flex-col md:flex-row">
+                            {/* Búsqueda */}
+                            <div className="flex-1 relative">
+                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                                <Input
+                                    placeholder="Buscar por nombre, email o código..."
+                                    value={searchTerm}
+                                    onChange={(e) => setSearchTerm(e.target.value)}
+                                    className="pl-10"
+                                />
+                            </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-4">
-                        {/* Filtro Nombre */}
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">
-                                Nombre
-                            </label>
-                            <input
-                                type="text"
-                                value={filtroNombre}
-                                onChange={(e) => setFiltroNombre(e.target.value)}
-                                placeholder="Buscar por nombre..."
-                                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                            />
-                        </div>
-
-                        {/* Filtro Email */}
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">
-                                Email
-                            </label>
-                            <input
-                                type="text"
-                                value={filtroEmail}
-                                onChange={(e) => setFiltroEmail(e.target.value)}
-                                placeholder="Buscar por email..."
-                                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                            />
-                        </div>
-
-                        {/* Filtro Departamento */}
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">
-                                Departamento
-                            </label>
-                            <input
-                                type="text"
-                                value={filtroDepartamento}
-                                onChange={(e) => setFiltroDepartamento(e.target.value)}
-                                placeholder="Filtrar por departamento..."
-                                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                            />
-                        </div>
-
-                        {/* Filtro Puesto */}
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">
-                                Puesto
-                            </label>
-                            <input
-                                type="text"
-                                value={filtroPuesto}
-                                onChange={(e) => setFiltroPuesto(e.target.value)}
-                                placeholder="Filtrar por puesto..."
-                                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                            />
-                        </div>
-
-                        {/* Filtro Estado */}
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">
-                                Estado
-                            </label>
+                            {/* Filtro de estado */}
                             <select
-                                value={filtroEstado}
-                                onChange={(e) => setFiltroEstado(e.target.value as any)}
-                                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                value={filterActivo === undefined ? '' : filterActivo.toString()}
+                                onChange={(e) => {
+                                    if (e.target.value === '') {
+                                        setFilterActivo(undefined);
+                                    } else {
+                                        setFilterActivo(e.target.value === 'true');
+                                    }
+                                }}
+                                className="px-4 py-2 border rounded-lg bg-white text-gray-700 font-medium"
                             >
-                                <option value="todos">Todos</option>
-                                <option value="activos">Solo Activos</option>
-                                <option value="inactivos">Solo Inactivos</option>
+                                <option value="">Todos los estados</option>
+                                <option value="true">Activos</option>
+                                <option value="false">Inactivos</option>
                             </select>
                         </div>
-                    </div>
+                    </CardContent>
+                </Card>
 
-                    <div className="flex gap-2">
-                        <button
-                            onClick={handleBuscarUsuarios}
-                            className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded flex items-center gap-2"
-                        >
-                            <span>🔍</span>
-                            Buscar en Servidor
-                        </button>
-                        <button
-                            onClick={limpiarFiltros}
-                            className="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded flex items-center gap-2"
-                        >
-                            <span>🗑️</span>
-                            Limpiar Filtros
-                        </button>
-                        <button
-                            onClick={loadUsuarios}
-                            className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded flex items-center gap-2"
-                        >
-                            <span>🔄</span>
-                            Recargar Todos
-                        </button>
-                    </div>
-                </div>
+                {/* Tabla */}
+                <Card>
+                    <CardHeader>
+                        <CardTitle>Lista de Usuarios</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <DataTable<UsuarioResponse>
+                            columns={[
+                                {
+                                    header: 'Nombre',
+                                    accessor: 'nombre',
+                                    width: 'w-32',
+                                },
+                                {
+                                    header: 'Email',
+                                    accessor: 'email',
+                                    width: 'w-40',
+                                    cell: (value) => (
+                                        <div className="flex items-center gap-2">
+                                            <Mail className="w-4 h-4 text-gray-400" />
+                                            {value}
+                                        </div>
+                                    ),
+                                },
+                                {
+                                    header: 'Código',
+                                    accessor: 'codigo',
+                                    cell: (value) => (
+                                        <span className="bg-gray-100 px-2 py-1 rounded text-sm font-mono">
+                                            {value}
+                                        </span>
+                                    ),
+                                },
+                                {
+                                    header: 'Rol',
+                                    accessor: 'rol',
+                                    cell: (value) => (
+                                        <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded text-sm font-medium">
+                                            {value}
+                                        </span>
+                                    ),
+                                },
+                                {
+                                    header: 'Estado',
+                                    accessor: 'activo',
+                                    cell: (value) => (
+                                        <span className={`px-2 py-1 rounded text-sm font-medium ${value
+                                            ? 'bg-green-100 text-green-800'
+                                            : 'bg-red-100 text-red-800'
+                                            }`}>
+                                            {value ? 'Activo' : 'Inactivo'}
+                                        </span>
+                                    ),
+                                },
+                            ]}
+                            data={filteredUsuarios}
+                            isLoading={isLoading}
+                            hasActions={true}
+                            renderActions={(usuario) => {
+                                const isCurrentUser = currentUser && usuario.email === currentUser.email;
 
-                {/* Contador de resultados */}
-                <div className="mb-4">
-                    <p className="text-sm text-gray-600">
-                        Mostrando {usuariosFiltrados.length} de {usuarios.length} usuarios
-                        {filtroEstado !== 'todos' && ` (Filtrado: ${filtroEstado})`}
-                    </p>
-                </div>
+                                return (
+                                    <div className="flex gap-2">
+                                        {/* Botón Activar - Si está inactivo */}
+                                        {!usuario.activo && (
+                                            <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                onClick={() => handleActivate(usuario)}
+                                                className="p-1 text-green-600 hover:text-green-700"
+                                                title="Activar usuario"
+                                            >
+                                                <Power className="w-4 h-4" />
+                                            </Button>
+                                        )}
 
-                {showForm && (
-                    <div className="mb-6">
-                        <h2 className="text-xl mb-4">Crear Usuario</h2>
-                        <UsuarioForm
-                            onSubmit={handleCreateUsuario}
-                            onCancel={() => setShowForm(false)}
+                                        {/* Botón Desactivar - Si está activo Y NO es el usuario actual */}
+                                        {usuario.activo && !isCurrentUser && (
+                                            <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                onClick={() => handleDeactivate(usuario)}
+                                                className="p-1 text-orange-600 hover:text-orange-700"
+                                                title="Desactivar usuario"
+                                            >
+                                                <PowerOff className="w-4 h-4" />
+                                            </Button>
+                                        )}
+
+                                        {/* Indicador para usuario actual */}
+                                        {isCurrentUser && (
+                                            <div className="flex items-center gap-1 text-xs text-blue-600 px-2 py-1 bg-blue-50 rounded">
+                                                <Shield className="w-3 h-3" />
+                                                <span>Tú</span>
+                                            </div>
+                                        )}
+                                    </div>
+                                );
+                            }}
+                            emptyMessage="No hay usuarios disponibles"
                         />
-                    </div>
-                )}
-
-                {editingUsuario && (
-                    <div className="mb-6">
-                        <h2 className="text-xl mb-4">Editar Usuario</h2>
-                        <UsuarioForm
-                            usuario={editingUsuario}
-                            onSubmit={handleUpdateUsuario}
-                            onCancel={() => setEditingUsuario(undefined)}
-                        />
-                    </div>
-                )}
-
-                {/* Editor de Roles */}
-                {editingRolesUsuario && (
-                    <RolEditor
-                        usuario={editingRolesUsuario}
-                        onSave={handleEditRoles}
-                        onCancel={() => setEditingRolesUsuario(undefined)}
-                    />
-                )}
-
-                <UsuarioList
-                    usuarios={usuariosFiltrados}
-                    onEdit={setEditingUsuario}
-                    onToggleStatus={handleToggleStatus}
-                    onEditRoles={setEditingRolesUsuario}
-                />
+                    </CardContent>
+                </Card>
             </div>
-        </Layout>
+
+            {/* Diálogo Crear */}
+            <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+                <DialogContent className="max-w-md">
+                    <DialogHeader>
+                        <DialogTitle>Nuevo Usuario</DialogTitle>
+                        <DialogDescription>
+                            Crea una nueva cuenta de usuario
+                        </DialogDescription>
+                    </DialogHeader>
+
+
+                    <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+                        {/* Nombre */}
+                        <div className="space-y-2">
+                            <label className="text-sm font-medium">Nombre *</label>
+                            <Input
+                                {...register('nombre')}
+                                placeholder="Juan Pérez"
+                                disabled={isSubmitting}
+                            />
+                            {errors.nombre && (
+                                <p className="text-sm text-red-500">{errors.nombre.message}</p>
+                            )}
+                        </div>
+
+                        {/* Email */}
+                        <div className="space-y-2">
+                            <label className="text-sm font-medium">Email *</label>
+                            <Input
+                                {...register('email')}
+                                type="email"
+                                placeholder="juan@example.com"
+                                disabled={isSubmitting}
+                            />
+                            {errors.email && (
+                                <p className="text-sm text-red-500">{errors.email.message}</p>
+                            )}
+                        </div>
+
+                        {/* Código */}
+                        <div className="space-y-2">
+                            <label className="text-sm font-medium">Código (Opcional)</label>
+                            <Input
+                                {...register('codigo')}
+                                placeholder="USR001"
+                                disabled={isSubmitting}
+                            />
+                            {errors.codigo && (
+                                <p className="text-sm text-red-500">{errors.codigo.message}</p>
+                            )}
+                        </div>
+
+                        {/* Contraseña */}
+                        <div className="space-y-2">
+                            <label className="text-sm font-medium">Contraseña *</label>
+                            <Input
+                                {...register('password')}
+                                type="password"
+                                placeholder="••••••••"
+                                disabled={isSubmitting}
+                            />
+                            {errors.password && (
+                                <p className="text-sm text-red-500">{errors.password.message}</p>
+                            )}
+                        </div>
+
+                        {/* Rol */}
+                        <div className="space-y-2">
+                            <label className="text-sm font-medium">Rol *</label>
+                            <Select
+                                value={selectedRol}
+                                onValueChange={(value) => setValue('nombreRol', value)}
+                            >
+                                <SelectTrigger>
+                                    <SelectValue placeholder="Selecciona un rol" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {roles.map((rol) => (
+                                        <SelectItem key={rol.id} value={rol.nombre}>
+                                            {rol.nombre}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                            {errors.nombreRol && (
+                                <p className="text-sm text-red-500">{errors.nombreRol.message}</p>
+                            )}
+                        </div>
+
+                        {/* Botones */}
+                        <div className="flex gap-3 pt-4">
+                            <Button
+                                type="submit"
+                                disabled={isSubmitting}
+                                className="bg-blue-600 hover:bg-blue-700 flex-1"
+                            >
+                                {isSubmitting ? 'Creando...' : 'Crear Usuario'}
+                            </Button>
+                            <Button
+                                type="button"
+                                variant="outline"
+                                disabled={isSubmitting}
+                                onClick={handleCloseDialog}
+                                className="flex-1"
+                            >
+                                Cancelar
+                            </Button>
+                        </div>
+                    </form>
+                </DialogContent>
+            </Dialog>
+            {/* 🆕 Diálogo de Confirmación para Desactivar - NUEVO */}
+            <Dialog open={showConfirmDialog} onOpenChange={setShowConfirmDialog}>
+                <DialogContent className="sm:max-w-[425px]">
+                    <DialogHeader>
+                        <DialogTitle>Confirmar desactivación</DialogTitle>
+                        <DialogDescription>
+                            ¿Estás seguro de desactivar al usuario{" "}
+                            <span className="font-semibold text-foreground">
+                                "{usuarioParaDesactivar?.nombre}"
+                            </span>
+                            ? El usuario no podrá acceder al sistema hasta que sea reactivado.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <DialogFooter>
+                        <Button
+                            variant="outline"
+                            onClick={() => setShowConfirmDialog(false)}
+                        >
+                            Cancelar
+                        </Button>
+                        <Button
+                            variant="destructive"
+                            onClick={confirmDeactivate}
+                        >
+                            Desactivar
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+        </AppLayout>
     );
 };

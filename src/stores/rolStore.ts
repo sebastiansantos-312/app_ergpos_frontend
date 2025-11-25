@@ -1,91 +1,89 @@
 import { create } from 'zustand';
 import { rolService } from '../services/rolService';
-import type { Rol } from '../types';
+import type { RolRequest, RolResponse } from '../types/rol';
 
 interface RolState {
-    roles: Rol[];
-    rolesActivos: Rol[];
+    roles: RolResponse[];
+    rolSeleccionado: RolResponse | null;
     isLoading: boolean;
     error: string | null;
-}
-
-interface RolActions {
-    fetchRolesActivos: () => Promise<void>;
-    fetchRolesInactivos: () => Promise<void>;
-    createRol: (nombre: string) => Promise<void>;
-    activarRol: (nombre: string) => Promise<void>;
-    desactivarRol: (nombre: string) => Promise<void>;
+    cargarRoles: (filtros?: { buscar?: string; activo?: boolean }) => Promise<void>;
+    obtenerRol: (nombre: string) => Promise<RolResponse>;
+    crearRol: (rol: RolRequest) => Promise<RolResponse>;
+    actualizarRol: (nombre: string, rol: RolRequest) => Promise<RolResponse>;
+    activarRol: (nombre: string) => Promise<RolResponse>;
+    desactivarRol: (nombre: string) => Promise<RolResponse>;
+    seleccionarRol: (rol: RolResponse | null) => void;
     clearError: () => void;
 }
 
-export const useRolStore = create<RolState & RolActions>((set) => ({
+export const useRolStore = create<RolState>((set) => ({
     roles: [],
-    rolesActivos: [],
+    rolSeleccionado: null,
     isLoading: false,
     error: null,
 
-    fetchRolesActivos: async () => {
+    cargarRoles: async (filtros = {}) => {
         set({ isLoading: true, error: null });
         try {
-            console.log('🔄 Fetching roles activos...');
-            const roles = await rolService.listarActivos();
-            console.log('✅ Roles cargados:', roles);
-
-            // Asegurar que siempre sea un array y filtrar solo activos
-            const rolesArray = Array.isArray(roles) ? roles : [];
-            const rolesActivos = rolesArray.filter(rol => rol.activo !== false);
-
-            set({
-                roles: rolesArray,
-                rolesActivos,
-                isLoading: false
-            });
-        } catch (error: any) {
-            console.error('❌ Error cargando roles:', error);
-            set({
-                error: error.message,
-                isLoading: false,
-                roles: [],
-                rolesActivos: []
-            });
-        }
-    },
-
-    fetchRolesInactivos: async () => {
-        set({ isLoading: true, error: null });
-        try {
-            const roles = await rolService.listarInactivos();
-            const rolesArray = Array.isArray(roles) ? roles : [];
-            set({
-                roles: rolesArray,
-                isLoading: false
-            });
+            const roles = await rolService.listarRoles(filtros);
+            set({ roles, isLoading: false });
         } catch (error: any) {
             set({
-                error: error.message,
+                error: error.response?.data?.message || 'Error cargando roles',
                 isLoading: false
             });
         }
     },
 
-    createRol: async (nombre: string) => {
+    obtenerRol: async (nombre: string) => {
         set({ isLoading: true, error: null });
         try {
-            const nuevoRol = await rolService.crearRol({ nombre });
+            const rol = await rolService.obtenerPorNombre(nombre);
+            set({ isLoading: false });
+            return rol;
+        } catch (error: any) {
+            set({
+                error: error.response?.data?.message || 'Error obteniendo rol',
+                isLoading: false
+            });
+            throw error;
+        }
+    },
 
-            // Asegurar que el nuevo rol tenga la estructura correcta
-            const rolCompleto: Rol = {
-                ...nuevoRol,
-                activo: nuevoRol.activo !== undefined ? nuevoRol.activo : true
-            };
-
-            set(state => ({
-                roles: [...state.roles, rolCompleto],
-                rolesActivos: [...state.rolesActivos, rolCompleto],
+    crearRol: async (rol: RolRequest) => {
+        set({ isLoading: true, error: null });
+        try {
+            const nuevoRol = await rolService.crearRol(rol);
+            set((state) => ({
+                roles: [...state.roles, nuevoRol],
                 isLoading: false
             }));
+            return nuevoRol;
         } catch (error: any) {
-            set({ error: error.message, isLoading: false });
+            set({
+                error: error.response?.data?.message || 'Error creando rol',
+                isLoading: false
+            });
+            throw error;
+        }
+    },
+
+    actualizarRol: async (nombre: string, rol: RolRequest) => {
+        set({ isLoading: true, error: null });
+        try {
+            const rolActualizado = await rolService.actualizarRol(nombre, rol);
+            set((state) => ({
+                roles: state.roles.map(r => r.nombre === nombre ? rolActualizado : r),
+                rolSeleccionado: state.rolSeleccionado?.nombre === nombre ? rolActualizado : state.rolSeleccionado,
+                isLoading: false
+            }));
+            return rolActualizado;
+        } catch (error: any) {
+            set({
+                error: error.response?.data?.message || 'Error actualizando rol',
+                isLoading: false
+            });
             throw error;
         }
     },
@@ -93,23 +91,18 @@ export const useRolStore = create<RolState & RolActions>((set) => ({
     activarRol: async (nombre: string) => {
         set({ isLoading: true, error: null });
         try {
-            const rolActualizado = await rolService.activarRol(nombre);
-
-            // Asegurar que el rol actualizado esté activo
-            const rolActivado: Rol = {
-                ...rolActualizado,
-                activo: true
-            };
-
-            set(state => ({
-                roles: state.roles.map(r =>
-                    r.nombre === nombre ? rolActivado : r
-                ),
-                rolesActivos: [...state.rolesActivos.filter(r => r.nombre !== nombre), rolActivado],
+            const rol = await rolService.activarRol(nombre);
+            set((state) => ({
+                roles: state.roles.map(r => r.nombre === nombre ? rol : r),
+                rolSeleccionado: state.rolSeleccionado?.nombre === nombre ? rol : state.rolSeleccionado,
                 isLoading: false
             }));
+            return rol;
         } catch (error: any) {
-            set({ error: error.message, isLoading: false });
+            set({
+                error: error.response?.data?.message || 'Error activando rol',
+                isLoading: false
+            });
             throw error;
         }
     },
@@ -117,28 +110,25 @@ export const useRolStore = create<RolState & RolActions>((set) => ({
     desactivarRol: async (nombre: string) => {
         set({ isLoading: true, error: null });
         try {
-            const rolActualizado = await rolService.desactivarRol(nombre);
-
-            // Asegurar que el rol actualizado esté inactivo
-            const rolDesactivado: Rol = {
-                ...rolActualizado,
-                activo: false
-            };
-
-            set(state => ({
-                roles: state.roles.map(r =>
-                    r.nombre === nombre ? rolDesactivado : r
-                ),
-                rolesActivos: state.rolesActivos.filter(r => r.nombre !== nombre),
+            const rol = await rolService.desactivarRol(nombre);
+            set((state) => ({
+                roles: state.roles.map(r => r.nombre === nombre ? rol : r),
+                rolSeleccionado: state.rolSeleccionado?.nombre === nombre ? rol : state.rolSeleccionado,
                 isLoading: false
             }));
+            return rol;
         } catch (error: any) {
-            set({ error: error.message, isLoading: false });
+            set({
+                error: error.response?.data?.message || 'Error desactivando rol',
+                isLoading: false
+            });
             throw error;
         }
     },
 
-    clearError: () => {
-        set({ error: null });
-    }
+    seleccionarRol: (rol: RolResponse | null) => {
+        set({ rolSeleccionado: rol });
+    },
+
+    clearError: () => set({ error: null }),
 }));

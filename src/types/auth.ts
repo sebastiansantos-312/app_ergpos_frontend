@@ -1,22 +1,34 @@
+// Login Request
 export interface LoginRequest {
-    email: string;
+    username: string;  
     password: string;
 }
 
+// Login Response  
 export interface LoginResponse {
     token: string;
-    email: string;
+    usuarioId: string;  
+    codigo: string;
     nombre: string;
-    roles: string[];
+    email: string;
+    rol: string;
+    activo: boolean;
 }
 
+// User Info (para /auth/me)
+export interface UserInfo {
+    codigo: string;
+    id: string;
+    nombre: string;
+    email: string;
+    rol: string;
+    modules: string[];
+    activo: boolean;
+}
+
+// Auth State
 export interface AuthState {
-    token: string | null;
-    user: {
-        email: string;
-        nombre: string;
-        roles: string[];
-    } | null;
-    isAuthenticated: boolean;
+    user: UserInfo | null;
     isLoading: boolean;
+    error: string | null;
 }

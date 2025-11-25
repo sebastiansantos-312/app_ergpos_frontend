@@ -1,21 +1,26 @@
-export interface ProductoRequestDTO {
+export interface ProductoRequest {
     codigo: string;
     nombre: string;
-    descripcion?: string;
+    descripcion?: string | null;
+    codigoCategoria?: string;
     precio: number;
+    stockMinimo?: number;
+    stockActual?: number;
+    unidadMedida?: string;
 }
 
-export interface ProductoResponseDTO {
+export interface ProductoResponse {
+    id: string;
     codigo: string;
     nombre: string;
     descripcion?: string;
+    categoriaId?: string;
+    categoriaNombre?: string;
     precio: number;
+    stockMinimo: number;
+    stockActual: number;
+    unidadMedida: string;
     activo: boolean;
-}
-
-export interface ProductoEstadisticas {
-    totalProductos: number;
-    productosActivos: number;
-    productosInactivos: number;
-    porcentajeActivos: number;
+    createdAt: string;
+    updatedAt: string;
 }

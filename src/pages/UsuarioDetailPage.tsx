@@ -1,201 +1,294 @@
-import React, { useState, useEffect } from 'react';
-import { useParams, Link, useNavigate } from 'react-router-dom';
+import React from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { toast } from 'react-toastify';
+import { AppLayout } from '../components/AppLayout';
+import { usuarioUpdateSchema, type UsuarioUpdateFormData } from '../schema';
+import { useRolStore } from '../stores/rolStore';
+import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
+import { Button } from '../components/ui/button';
+import { Input } from '../components/ui/input';
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '../components/ui/select';
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogHeader,
+    DialogTitle,
+} from '../components/ui/dialog';
 import { usuarioService } from '../services/usuarioService';
-import type { UsuarioResponseDTO } from '../types/index';
-import { Layout } from '../components/shared/Layout';
+import { LoadingSpinner } from '../components/ui/LoadingSpinner';
 
 export const UsuarioDetailPage: React.FC = () => {
-    const { codigo } = useParams<{ codigo: string }>();
+    const { email } = useParams<{ email: string }>();
     const navigate = useNavigate();
-    const [usuario, setUsuario] = useState<UsuarioResponseDTO | null>(null);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
+    const { roles, cargarRoles } = useRolStore();
 
-    useEffect(() => {
-        if (codigo) {
-            loadUsuario(codigo);
-        }
-    }, [codigo]);
+    const [usuario, setUsuario] = React.useState<any | null>(null);
+    const [isLoading, setIsLoading] = React.useState(true);
+    const [isEditDialogOpen, setIsEditDialogOpen] = React.useState(false);
 
-    const loadUsuario = async (codigo: string) => {
-        try {
-            setLoading(true);
-            const data = await usuarioService.obtenerPorCodigo(codigo);
-            setUsuario(data);
-            setError(null);
-        } catch (err) {
-            setError('Usuario no encontrado');
-            console.error('Error cargando usuario:', err);
-        } finally {
-            setLoading(false);
-        }
-    };
+    const {
+        register,
+        handleSubmit,
+        reset,
+        setValue,
+        watch,
+        formState: { errors, isSubmitting },
+    } = useForm<UsuarioUpdateFormData>({
+        resolver: zodResolver(usuarioUpdateSchema),
+    });
 
-    const handleToggleStatus = async () => {
-        if (!usuario) return;
+    const nombreRol = watch('nombreRol');
 
-        try {
-            if (usuario.activo) {
-                await usuarioService.desactivarUsuario(usuario.email);
-            } else {
-                await usuarioService.activarUsuario(usuario.email);
+    // Cargar usuario
+    React.useEffect(() => {
+        const cargarUsuario = async () => {
+            if (!email) return;
+            setIsLoading(true);
+            try {
+                const data = await usuarioService.obtenerPorEmail(email);
+                setUsuario(data);
+                cargarRoles();
+            } catch (error: any) {
+                toast.error('Error cargando usuario');
+                navigate('/usuarios');
+            } finally {
+                setIsLoading(false);
             }
-            // Recargar datos
-            await loadUsuario(usuario.codigo);
-        } catch (error) {
-            console.error('Error cambiando estado:', error);
+        };
+        cargarUsuario();
+    }, [email, navigate, cargarRoles]);
+
+    const onSubmit = async (data: UsuarioUpdateFormData) => {
+        if (!usuario?.email) return;
+
+        try {
+            // Crear objeto sin el campo password si está vacío
+            const updateData: UsuarioUpdateFormData = {
+                nombre: data.nombre,
+                email: data.email,
+                nombreRol: data.nombreRol,
+                codigo: data.codigo,
+            };
+
+            // Solo incluir password si se proporcionó
+            if (data.password && data.password.trim() !== '') {
+                updateData.password = data.password;
+            }
+
+            await usuarioService.actualizarUsuario(usuario.email, updateData);
+            toast.success('Usuario actualizado correctamente');
+            setIsEditDialogOpen(false);
+
+            // Recargar usuario
+            const usuarioActualizado = await usuarioService.obtenerPorEmail(usuario.email);
+            setUsuario(usuarioActualizado);
+        } catch (error: any) {
+            toast.error(error.response?.data?.message || 'Error al actualizar');
         }
     };
 
-    if (loading) {
+    if (isLoading) {
         return (
-            <div className="container mx-auto p-6">
-                <div className="flex justify-center items-center h-64">
-                    <div className="text-lg">Cargando usuario...</div>
+            <AppLayout>
+                <div className="flex justify-center items-center py-12">
+                    <LoadingSpinner size="lg" />
                 </div>
-            </div>
+            </AppLayout>
         );
     }
 
-    if (error || !usuario) {
+    if (!usuario) {
         return (
-            <div className="container mx-auto p-6">
-                <div className="bg-red-50 border border-red-200 rounded-lg p-6">
-                    <div className="flex items-center">
-                        <span className="text-red-500 text-2xl mr-3">❌</span>
-                        <div>
-                            <h2 className="text-lg font-semibold text-red-800">Error</h2>
-                            <p className="text-red-600">{error || 'Usuario no encontrado'}</p>
-                        </div>
-                    </div>
-                    <button
-                        onClick={() => navigate('/usuarios')}
-                        className="mt-4 bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700"
-                    >
-                        Volver a Usuarios
-                    </button>
+            <AppLayout>
+                <div className="text-center py-12">
+                    <p className="text-gray-500">Usuario no encontrado</p>
                 </div>
-            </div>
+            </AppLayout>
         );
     }
 
     return (
-        <Layout>
-
-            <div className="container mx-auto p-6">
+        <AppLayout>
+            <div className="space-y-6 max-w-2xl">
                 {/* Header */}
-                <div className="mb-6">
-                    <Link
-                        to="/usuarios"
-                        className="text-blue-600 hover:text-blue-800 mb-4 inline-flex items-center"
+                <div className="flex justify-between items-start">
+                    <div>
+                        <h1 className="text-3xl font-bold text-gray-900">{usuario.nombre}</h1>
+                        <p className="text-gray-600 mt-1">{usuario.email}</p>
+                    </div>
+                    <Button
+                        onClick={() => {
+                            reset({
+                                nombre: usuario.nombre,
+                                email: usuario.email,
+                                nombreRol: usuario.rol,
+                                codigo: usuario.codigo || '',
+                                password: undefined,
+                            });
+                            setIsEditDialogOpen(true);
+                        }}
+                        className="bg-blue-600 hover:bg-blue-700"
                     >
-                        ← Volver a Usuarios
-                    </Link>
-                    <div className="flex justify-between items-start mt-2">
-                        <div>
-                            <h1 className="text-3xl font-bold text-gray-800">{usuario.nombre}</h1>
-                            <p className="text-gray-600">{usuario.email}</p>
-                        </div>
-                        <div className="flex gap-2">
-                            <button
-                                onClick={handleToggleStatus}
-                                className={`px-4 py-2 rounded ${usuario.activo
-                                    ? 'bg-red-600 hover:bg-red-700 text-white'
-                                    : 'bg-green-600 hover:bg-green-700 text-white'
-                                    }`}
-                            >
-                                {usuario.activo ? 'Desactivar' : 'Activar'}
-                            </button>
-                            <Link
-                                to={`/usuarios`} // En un caso real, iría a edición
-                                className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded"
-                            >
-                                Editar
-                            </Link>
-                        </div>
-                    </div>
+                        Editar Usuario
+                    </Button>
                 </div>
 
-                {/* Información del usuario */}
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                    {/* Información principal */}
-                    <div className="lg:col-span-2 space-y-6">
-                        <div className="bg-white rounded-lg shadow p-6">
-                            <h2 className="text-xl font-semibold mb-4">Información Personal</h2>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700">Código</label>
-                                    <p className="mt-1 text-sm text-gray-900">{usuario.codigo || 'N/A'}</p>
-                                </div>
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700">Email</label>
-                                    <p className="mt-1 text-sm text-gray-900">{usuario.email}</p>
-                                </div>
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700">Departamento</label>
-                                    <p className="mt-1 text-sm text-gray-900">{usuario.departamento || 'N/A'}</p>
-                                </div>
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700">Puesto</label>
-                                    <p className="mt-1 text-sm text-gray-900">{usuario.puesto || 'N/A'}</p>
-                                </div>
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700">Estado</label>
-                                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium mt-1 ${usuario.activo
-                                        ? 'bg-green-100 text-green-800'
-                                        : 'bg-red-100 text-red-800'
-                                        }`}>
-                                        {usuario.activo ? 'Activo' : 'Inactivo'}
-                                    </span>
-                                </div>
+                {/* Info Card */}
+                <Card>
+                    <CardHeader>
+                        <CardTitle>Información del Usuario</CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                        <div className="grid grid-cols-2 gap-6">
+                            <div>
+                                <p className="text-sm text-gray-600 font-medium">Nombre</p>
+                                <p className="text-gray-900">{usuario.nombre}</p>
+                            </div>
+                            <div>
+                                <p className="text-sm text-gray-600 font-medium">Email</p>
+                                <p className="text-gray-900">{usuario.email}</p>
+                            </div>
+                            <div>
+                                <p className="text-sm text-gray-600 font-medium">Código</p>
+                                <p className="text-gray-900 font-mono">{usuario.codigo || '-'}</p>
+                            </div>
+                            <div>
+                                <p className="text-sm text-gray-600 font-medium">Rol</p>
+                                <p className="text-gray-900">{usuario.rol}</p>
+                            </div>
+                            <div>
+                                <p className="text-sm text-gray-600 font-medium">Estado</p>
+                                <p className={`font-medium ${usuario.activo ? 'text-green-600' : 'text-red-600'}`}>
+                                    {usuario.activo ? 'Activo' : 'Inactivo'}
+                                </p>
                             </div>
                         </div>
-                    </div>
+                    </CardContent>
+                </Card>
 
-                    {/* Roles y acciones */}
-                    <div className="space-y-6">
-                        <div className="bg-white rounded-lg shadow p-6">
-                            <h2 className="text-xl font-semibold mb-4">Roles Asignados</h2>
-                            {usuario.roles.length === 0 ? (
-                                <p className="text-gray-500 text-sm">No hay roles asignados</p>
-                            ) : (
-                                <div className="space-y-2">
-                                    {usuario.roles.map((rol) => (
-                                        <div
-                                            key={rol}
-                                            className="flex items-center justify-between p-3 bg-gray-50 rounded"
-                                        >
-                                            <span className="font-medium text-gray-900">{rol}</span>
-                                            <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs">
-                                                Asignado
-                                            </span>
-                                        </div>
-                                    ))}
-                                </div>
-                            )}
-                            <button className="w-full mt-4 bg-gray-100 hover:bg-gray-200 text-gray-800 py-2 px-4 rounded">
-                                Gestionar Roles
-                            </button>
-                        </div>
+                {/* Diálogo Editar */}
+                <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+                    <DialogContent>
+                        <DialogHeader>
+                            <DialogTitle>Editar Usuario</DialogTitle>
+                            <DialogDescription>
+                                Modifica los datos del usuario. Deja la contraseña vacía para no cambiarla.
+                            </DialogDescription>
+                        </DialogHeader>
 
-                        {/* Estadísticas rápidas */}
-                        <div className="bg-white rounded-lg shadow p-6">
-                            <h2 className="text-xl font-semibold mb-4">Acciones</h2>
+                        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+                            {/* Nombre */}
                             <div className="space-y-2">
-                                <button className="w-full text-left p-3 hover:bg-gray-50 rounded border">
-                                    📧 Enviar correo
-                                </button>
-                                <button className="w-full text-left p-3 hover:bg-gray-50 rounded border">
-                                    🔄 Resetear contraseña
-                                </button>
-                                <button className="w-full text-left p-3 hover:bg-gray-50 rounded border">
-                                    📊 Ver actividad
-                                </button>
+                                <label className="text-sm font-medium">Nombre *</label>
+                                <Input
+                                    {...register('nombre')}
+                                    disabled={isSubmitting}
+                                    placeholder="Juan Pérez"
+                                />
+                                {errors.nombre && (
+                                    <p className="text-sm text-red-500">{errors.nombre.message}</p>
+                                )}
                             </div>
-                        </div>
-                    </div>
-                </div>
+
+                            {/* Email */}
+                            <div className="space-y-2">
+                                <label className="text-sm font-medium">Email *</label>
+                                <Input
+                                    {...register('email')}
+                                    type="email"
+                                    disabled={isSubmitting}
+                                    placeholder="juan@example.com"
+                                />
+                                {errors.email && (
+                                    <p className="text-sm text-red-500">{errors.email.message}</p>
+                                )}
+                            </div>
+
+                            {/* Código */}
+                            <div className="space-y-2">
+                                <label className="text-sm font-medium">Código (Opcional)</label>
+                                <Input
+                                    {...register('codigo')}
+                                    disabled={isSubmitting}
+                                    placeholder="USR001"
+                                />
+                                {errors.codigo && (
+                                    <p className="text-sm text-red-500">{errors.codigo.message}</p>
+                                )}
+                            </div>
+
+                            {/* Contraseña */}
+                            <div className="space-y-2">
+                                <label className="text-sm font-medium">Nueva Contraseña (Opcional)</label>
+                                <Input
+                                    {...register('password')}
+                                    type="password"
+                                    disabled={isSubmitting}
+                                    placeholder="Dejar vacío para no cambiar"
+                                />
+                                {errors.password && (
+                                    <p className="text-sm text-red-500">{errors.password.message}</p>
+                                )}
+                                <p className="text-xs text-gray-500">
+                                    Mínimo 6 caracteres. Dejar vacío para mantener la contraseña actual.
+                                </p>
+                            </div>
+
+                            {/* Rol */}
+                            <div className="space-y-2">
+                                <label className="text-sm font-medium">Rol *</label>
+                                <Select
+                                    value={nombreRol}
+                                    onValueChange={(value) => setValue('nombreRol', value)}
+                                >
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="Selecciona rol" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {roles.map((rol) => (
+                                            <SelectItem key={rol.id} value={rol.nombre}>
+                                                {rol.nombre}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                                {errors.nombreRol && (
+                                    <p className="text-sm text-red-500">{errors.nombreRol.message}</p>
+                                )}
+                            </div>
+
+                            {/* Botones */}
+                            <div className="flex gap-3 pt-4">
+                                <Button
+                                    type="submit"
+                                    disabled={isSubmitting}
+                                    className="bg-blue-600 hover:bg-blue-700 flex-1"
+                                >
+                                    {isSubmitting ? 'Guardando...' : 'Guardar Cambios'}
+                                </Button>
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    disabled={isSubmitting}
+                                    onClick={() => setIsEditDialogOpen(false)}
+                                    className="flex-1"
+                                >
+                                    Cancelar
+                                </Button>
+                            </div>
+                        </form>
+                    </DialogContent>
+                </Dialog>
             </div>
-        </Layout>
+        </AppLayout>
     );
 };
