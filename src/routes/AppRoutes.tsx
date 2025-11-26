@@ -17,6 +17,7 @@ import { ProductosPage } from '../pages/ProductosPage';
 import { MovimientosPage } from '../pages/MovimientosPage';
 import { ProveedoresPage } from '../pages/ProveedoresPage';
 import { LoadingSpinner } from './../components/ui/LoadingSpinner';
+import { AuditoriaPage } from '@/pages/AuditoriaPage';
 
 export const AppRoutes: React.FC = () => {
     const { isLoading, loadUser } = useAuthStore();
@@ -146,7 +147,7 @@ export const AppRoutes: React.FC = () => {
             />
 
             {/* Auditoría - ADMINISTRADOR only */}
-            {/* <Route
+            <Route
                 path="/auditoria"
                 element={
                     <ProtectedRoute>
@@ -155,7 +156,7 @@ export const AppRoutes: React.FC = () => {
                         </PermissionGuard>
                     </ProtectedRoute>
                 }
-            /> */}
+            />
 
             {/* Perfil - All authenticated users (sin permisos específicos) */}
             <Route

@@ -126,7 +126,8 @@ export const AuditoriaPage: React.FC = () => {
                                             <th className="text-left p-3 font-semibold">Fecha</th>
                                             <th className="text-left p-3 font-semibold">Evento</th>
                                             <th className="text-left p-3 font-semibold">Tabla</th>
-                                            <th className="text-left p-3 font-semibold">Nombre Usuario</th>
+                                            <th className="text-left p-3 font-semibold">ID usuario</th>
+                                            <th className="text-left p-3 font-semibold">Detalle</th>
                                         </tr>
                                     </thead>
                                     <tbody>
