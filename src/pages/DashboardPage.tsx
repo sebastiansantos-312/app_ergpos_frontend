@@ -7,8 +7,11 @@ import { useProductoStore } from '../stores/productoStore';
 import { useUsuarioStore } from '../stores/usuarioStore';
 import { useCategoriaStore } from '../stores/categoriaStore';
 import { useProveedorStore } from '../stores/proveedorStore';
+import { useRolStore } from '../stores/rolStore';
+import { useMovimientoStore } from '../stores/movimientoStore';
+import { useAuditoriaStore } from '../stores/auditoriaStore';
 import { LoadingSpinner } from '../components/ui/LoadingSpinner';
-import { Package, Users, Tag, Truck, BarChart3, TrendingUp, Lock } from 'lucide-react';
+import { Package, Users, Tag, Truck, BarChart3, TrendingUp, Lock, Shield, ArrowRightLeft, BookOpen } from 'lucide-react';
 
 interface StatCard {
     title: string;
@@ -28,31 +31,31 @@ interface QuickAction {
 export const DashboardPage: React.FC = () => {
     const navigate = useNavigate();
     const { user } = useAuthStore();
+    
     const { productos, cargarProductos, isLoading: loadingProductos } = useProductoStore();
     const { usuarios, cargarUsuarios, isLoading: loadingUsuarios } = useUsuarioStore();
     const { categorias, cargarCategorias, isLoading: loadingCategorias } = useCategoriaStore();
     const { proveedores, cargarProveedores, isLoading: loadingProveedores } = useProveedorStore();
+    const { roles, cargarRoles, isLoading: loadingRoles } = useRolStore();
+    const { movimientos, cargarMovimientos, isLoading: loadingMovimientos } = useMovimientoStore();
+    const { registros, cargarTodos, isLoading: loadingAuditoria } = useAuditoriaStore();
 
     useEffect(() => {
-        // Cargar solo los datos de los módulos disponibles
-        if (user?.modules.includes('productos')) {
-            cargarProductos({ activo: true });
-        }
-        if (user?.modules.includes('usuarios')) {
-            cargarUsuarios({ activo: true });
-        }
-        if (user?.modules.includes('categorias')) {
-            cargarCategorias({ activo: true });
-        }
-        if (user?.modules.includes('proveedores')) {
-            cargarProveedores({ activo: true });
-        }
-    }, [user?.modules]);
+        // Cargar datos de todos los módulos (sin importar permisos)
+        cargarProductos({ activo: true });
+        cargarUsuarios({ activo: true });
+        cargarCategorias({ activo: true });
+        cargarProveedores({ activo: true });
+        cargarRoles({ activo: true });
+        cargarMovimientos();
+        cargarTodos();
+    }, []);
 
-    const isLoading = loadingProductos || loadingUsuarios || loadingCategorias || loadingProveedores;
+    const isLoading = loadingProductos || loadingUsuarios || loadingCategorias || 
+                     loadingProveedores || loadingRoles || loadingMovimientos || loadingAuditoria;
 
-    // Solo mostrar stats de módulos disponibles
-    const availableStats: StatCard[] = [
+    // TODAS las stats disponibles
+    const allStats: StatCard[] = [
         {
             title: 'Productos',
             value: productos.length,
@@ -85,7 +88,34 @@ export const DashboardPage: React.FC = () => {
             module: 'proveedores',
             href: '/proveedores'
         },
-    ].filter(stat => user?.modules.includes(stat.module));
+        {
+            title: 'Roles',
+            value: roles.length,
+            icon: <Shield className="w-6 h-6" />,
+            color: 'bg-red-500',
+            module: 'roles',
+            href: '/roles'
+        },
+        {
+            title: 'Movimientos',
+            value: movimientos.length,
+            icon: <ArrowRightLeft className="w-6 h-6" />,
+            color: 'bg-indigo-500',
+            module: 'movimientos',
+            href: '/movimientos'
+        },
+        {
+            title: 'Auditoría',
+            value: registros.length,
+            icon: <BookOpen className="w-6 h-6" />,
+            color: 'bg-cyan-500',
+            module: 'auditoria',
+            href: '/auditoria'
+        },
+    ];
+
+    // Filtrar stats según permisos del usuario
+    const availableStats = allStats.filter(stat => user?.modules.includes(stat.module));
 
     // Acciones rápidas disponibles según rol
     const allQuickActions: QuickAction[] = [
@@ -93,9 +123,9 @@ export const DashboardPage: React.FC = () => {
         { name: 'Gestionar Usuarios', module: 'usuarios', href: '/usuarios' },
         { name: 'Gestionar Categorías', module: 'categorias', href: '/categorias' },
         { name: 'Gestionar Proveedores', module: 'proveedores', href: '/proveedores' },
+        { name: 'Gestionar Roles', module: 'roles', href: '/roles' },
         { name: 'Ver Movimientos', module: 'movimientos', href: '/movimientos' },
         { name: 'Ver Auditoría', module: 'auditoria', href: '/auditoria' },
-        { name: 'Gestionar Roles', module: 'roles', href: '/roles' },
     ];
 
     const availableActions = allQuickActions.filter(action =>
@@ -119,7 +149,7 @@ export const DashboardPage: React.FC = () => {
                     </p>
                 </div>
 
-                {/* Stats Grid - Solo mostrar stats disponibles */}
+                {/* Stats Grid - Mostrar solo stats disponibles según permisos */}
                 {isLoading ? (
                     <div className="flex justify-center items-center py-12">
                         <LoadingSpinner size="lg" />
@@ -168,11 +198,9 @@ export const DashboardPage: React.FC = () => {
                                     <button
                                         key={action.name}
                                         onClick={() => handleNavigate(action.href)}
-                                        className="p-4 border rounded-lg hover:bg-blue-50 hover:border-blue-300 transition-all text-left"
+                                        className="p-4 border rounded-lg hover:bg-blue-50 hover:border-blue-300 transition-all text-left font-medium text-gray-900 hover:text-blue-600"
                                     >
-                                        <p className="font-medium text-gray-900 hover:text-blue-600">
-                                            {action.name}
-                                        </p>
+                                        {action.name}
                                     </button>
                                 ))}
                             </div>
