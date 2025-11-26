@@ -547,22 +547,27 @@ export const ProductosPage: React.FC = () => {
                             {/* Categoría */}
                             <div className="space-y-2">
                                 <label className="text-sm font-medium">Categoría</label>
-                                <Select
-                                    value={codigoCategoria || ""}
-                                    onValueChange={(value) => setValue('codigoCategoria', value || undefined)}
-                                >
-                                    <SelectTrigger>
-                                        <SelectValue placeholder="Selecciona categoría" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="">Sin categoría</SelectItem>
-                                        {categorias.map((cat) => (
-                                            <SelectItem key={cat.id} value={cat.codigo || cat.id}>
-                                                {cat.nombre}
-                                            </SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
+                                <div className="space-y-2">
+                                    <label className="text-sm font-medium">Categoría</label>
+                                    <Select
+                                        value={codigoCategoria || "NONE"}
+                                        onValueChange={(value) =>
+                                            setValue("codigoCategoria", value === "NONE" ? undefined : value)
+                                        }
+                                    >
+                                        <SelectTrigger>
+                                            <SelectValue placeholder="Selecciona categoría" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="NONE">Sin categoría</SelectItem>
+                                            {categorias.map((cat) => (
+                                                <SelectItem key={cat.id} value={cat.codigo || String(cat.id)}>
+                                                    {cat.nombre}
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
                             </div>
 
                             {/* Precio */}
