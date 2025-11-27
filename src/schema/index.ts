@@ -20,7 +20,7 @@ export const usuarioCreateSchema = z.object({
     nombre: z.string().min(1, 'El nombre es obligatorio').max(255, 'Máximo 255 caracteres'),
     email: z.string().email('Email inválido'),
     password: z.string().min(6, 'La contraseña debe tener al menos 6 caracteres'),
-    codigo: z.string().optional(),
+    codigo: z.string().optional().transform(val => val === '' ? undefined : val),
     nombreRol: z.string().min(1, 'El rol es obligatorio'),
 });
 
