@@ -40,7 +40,7 @@ export const LoginPage: React.FC = () => {
                 <div className="bg-white rounded-lg shadow-2xl p-8">
                     {/* Logo */}
                     <div className="text-center mb-8">
-                        <h1 className="text-4xl font-bold text-blue-600 mb-2">ERGPOS</h1>
+                        <h1 className="text-4xl font-bold text-blue-600 mb-2">ERGSYSTEM</h1>
                         <p className="text-gray-600">Sistema de Gestión de Inventario</p>
                     </div>
 
@@ -117,15 +117,6 @@ export const LoginPage: React.FC = () => {
                             )}
                         </Button>
                     </form>
-
-                    {/* Footer */}
-                    {/* <div className="mt-6 text-center text-sm text-gray-600">
-                        <p>Credenciales de prueba:</p>
-                        <p className="mt-2 bg-gray-100 p-2 rounded text-xs">
-                            <strong>Email:</strong> admin@ergpos.com<br />
-                            <strong>Contraseña:</strong> password123
-                        </p>
-                    </div> */}
                 </div>
             </div>
         </div>

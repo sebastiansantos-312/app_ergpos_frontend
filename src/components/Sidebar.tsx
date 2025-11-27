@@ -36,7 +36,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ user }) => {
         <aside className="w-64 bg-white shadow-lg flex flex-col overflow-hidden">
             {/* Logo Section */}
             <div className="p-6 border-b">
-                <h1 className="text-2xl font-bold text-blue-600">ERGPOS</h1>
+                <h1 className="text-2xl font-bold text-blue-600">ERGSYSTEM</h1>
                 <p className="text-sm text-gray-600">Sistema de Inventario</p>
             </div>
 

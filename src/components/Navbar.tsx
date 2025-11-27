@@ -45,7 +45,7 @@ export const Navbar: React.FC<NavbarProps> = ({ user }) => {
                         )}
                     </button>
                     <h2 className="text-lg font-semibold text-gray-800">
-                        ERGPOS - Sistema de Gestión de Inventario
+                        Sistema de Gestión de Inventario
                     </h2>
                 </div>
 
