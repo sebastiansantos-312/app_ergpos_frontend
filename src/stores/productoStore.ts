@@ -1,134 +1,86 @@
 import { create } from 'zustand';
-import { productoService } from '../services/productoService';
-import type { ProductoRequest, ProductoResponse } from '../types/producto';
+import type { ProductoResponse } from '../types/producto';
 
+/**
+ * Producto Store - State Management Only
+ * 
+ * This store ONLY handles state. All business logic has been moved to useProductos hook.
+ * This follows the Single Responsibility Principle and makes the code more testable.
+ */
 interface ProductoState {
+    // State
     productos: ProductoResponse[];
     productoSeleccionado: ProductoResponse | null;
     isLoading: boolean;
     error: string | null;
-    cargarProductos: (filtros?: { buscar?: string; categoria?: string; activo?: boolean }) => Promise<void>;
-    obtenerProducto: (codigo: string) => Promise<ProductoResponse>;
-    crearProducto: (producto: ProductoRequest) => Promise<ProductoResponse>;
-    actualizarProducto: (codigo: string, producto: ProductoRequest) => Promise<ProductoResponse>;
-    activarProducto: (codigo: string) => Promise<ProductoResponse>;
-    desactivarProducto: (codigo: string) => Promise<ProductoResponse>;
-    seleccionarProducto: (producto: ProductoResponse | null) => void;
+    totalProductos: number;
+
+    // Simple setters
+    setProductos: (productos: ProductoResponse[]) => void;
+    setProductoSeleccionado: (producto: ProductoResponse | null) => void;
+    setLoading: (isLoading: boolean) => void;
+    setError: (error: string | null) => void;
+    setTotal: (total: number) => void;
     clearError: () => void;
+
+    // Local state operations (no API calls)
+    updateProducto: (codigo: string, producto: ProductoResponse) => void;
+    addProducto: (producto: ProductoResponse) => void;
+    removeProducto: (codigo: string) => void;
 }
 
 export const useProductoStore = create<ProductoState>((set) => ({
+    // Initial state
     productos: [],
     productoSeleccionado: null,
     isLoading: false,
     error: null,
+    totalProductos: 0,
 
-    cargarProductos: async (filtros = {}) => {
-        set({ isLoading: true, error: null });
-        try {
-            const productos = await productoService.listarProductos(filtros);
-            set({ productos, isLoading: false });
-        } catch (error: any) {
-            set({
-                error: error.response?.data?.message || 'Error cargando productos',
-                isLoading: false
-            });
-        }
-    },
+    // Simple setters
+    setProductos: (productos) => set({ productos }),
 
-    obtenerProducto: async (codigo: string) => {
-        set({ isLoading: true, error: null });
-        try {
-            const producto = await productoService.obtenerPorCodigo(codigo);
-            set({ isLoading: false });
-            return producto;
-        } catch (error: any) {
-            set({
-                error: error.response?.data?.message || 'Error obteniendo producto',
-                isLoading: false
-            });
-            throw error;
-        }
-    },
+    setProductoSeleccionado: (producto) => set({ productoSeleccionado: producto }),
 
-    crearProducto: async (producto: ProductoRequest) => {
-        set({ isLoading: true, error: null });
-        try {
-            const nuevoProducto = await productoService.crearProducto(producto);
-            set((state) => ({
-                productos: [...state.productos, nuevoProducto],
-                isLoading: false
-            }));
-            return nuevoProducto;
-        } catch (error: any) {
-            set({
-                error: error.response?.data?.message || 'Error creando producto',
-                isLoading: false
-            });
-            throw error;
-        }
-    },
+    setLoading: (isLoading) => set({ isLoading }),
 
-    actualizarProducto: async (codigo: string, producto: ProductoRequest) => {
-        set({ isLoading: true, error: null });
-        try {
-            const productoActualizado = await productoService.actualizarProducto(codigo, producto);
-            set((state) => ({
-                productos: state.productos.map(p => p.codigo === codigo ? productoActualizado : p),
-                productoSeleccionado: state.productoSeleccionado?.codigo === codigo ? productoActualizado : state.productoSeleccionado,
-                isLoading: false
-            }));
-            return productoActualizado;
-        } catch (error: any) {
-            set({
-                error: error.response?.data?.message || 'Error actualizando producto',
-                isLoading: false
-            });
-            throw error;
-        }
-    },
+    setError: (error) => set({ error }),
 
-    activarProducto: async (codigo: string) => {
-        set({ isLoading: true, error: null });
-        try {
-            const producto = await productoService.activarProducto(codigo);
-            set((state) => ({
-                productos: state.productos.map(p => p.codigo === codigo ? producto : p),
-                productoSeleccionado: state.productoSeleccionado?.codigo === codigo ? producto : state.productoSeleccionado,
-                isLoading: false
-            }));
-            return producto;
-        } catch (error: any) {
-            set({
-                error: error.response?.data?.message || 'Error activando producto',
-                isLoading: false
-            });
-            throw error;
-        }
-    },
-
-    desactivarProducto: async (codigo: string) => {
-        set({ isLoading: true, error: null });
-        try {
-            const producto = await productoService.desactivarProducto(codigo);
-            set((state) => ({
-                productos: state.productos.map(p => p.codigo === codigo ? producto : p),
-                productoSeleccionado: state.productoSeleccionado?.codigo === codigo ? producto : state.productoSeleccionado,
-                isLoading: false
-            }));
-            return producto;
-        } catch (error: any) {
-            set({
-                error: error.response?.data?.message || 'Error desactivando producto',
-                isLoading: false
-            });
-            throw error;
-        }
-    },
-
-    seleccionarProducto: (producto: ProductoResponse | null) => {
-        set({ productoSeleccionado: producto });
-    },
+    setTotal: (total) => set({ totalProductos: total }),
 
     clearError: () => set({ error: null }),
+
+    // Local state operations
+    /**
+     * Updates a product in the local state without triggering a re-fetch
+     * @param codigo - The unique code of the product to update
+     * @param producto - The updated product data
+     */
+    updateProducto: (codigo, producto) => set((state) => ({
+        productos: state.productos.map(p => p.codigo === codigo ? producto : p),
+        productoSeleccionado: state.productoSeleccionado?.codigo === codigo
+            ? producto
+            : state.productoSeleccionado,
+    })),
+
+    /**
+     * Adds a new product to the local state
+     * @param producto - The new product to add
+     */
+    addProducto: (producto) => set((state) => ({
+        productos: [...state.productos, producto],
+        totalProductos: state.totalProductos + 1,
+    })),
+
+    /**
+     * Removes a product from the local state
+     * @param codigo - The unique code of the product to remove
+     */
+    removeProducto: (codigo) => set((state) => ({
+        productos: state.productos.filter(p => p.codigo !== codigo),
+        totalProductos: state.totalProductos - 1,
+        productoSeleccionado: state.productoSeleccionado?.codigo === codigo
+            ? null
+            : state.productoSeleccionado,
+    })),
 }));

@@ -7,18 +7,18 @@ import { PermissionGuard } from '../components/PermissionGuard';
 
 // Pages
 import { LoginPage } from '../pages/LoginPage';
-import { DashboardPage } from '../pages/DashboardPage';
-import { PerfilPage } from '../pages/PerfilPage';
-import { RolesPage } from '../pages/RolesPage';
-import { UsuarioDetailPage } from '../pages/UsuarioDetailPage';
-import { UsuariosPage } from '../pages/UsuariosPage';
-import { CategoriasPage } from '../pages/CategoriasPage';
-import { ProductosPage } from '../pages/ProductosPage';
-import { MovimientosPage } from '../pages/MovimientosPage';
-import { ProveedoresPage } from '../pages/ProveedoresPage';
+import { DashboardPage } from '../features/dashboard/DashboardPage';
+import { PerfilPage } from '../features/perfil/PerfilPage';
+import { RolesPage } from '../features/roles/RolesPage';
+import { UsuarioDetailPage } from '../features/usuario-detail/UsuarioDetailPage';
+import { UsuariosPage } from '../features/usuarios/UsuariosPage';
+import { CategoriasPage } from '../features/categorias/CategoriasPage';
+import { ProductosPage } from '../features/productos/ProductosPage';
+import { MovimientosPage } from '../features/movimientos/MovimientosPage';
+import { ProveedoresPage } from '../features/proveedores/ProveedoresPage';
 import { LoadingSpinner } from './../components/ui/LoadingSpinner';
-import { AuditoriaPage } from '@/pages/AuditoriaPage';
-
+import { AuditoriaPage } from './../features/auditoria/AuditoriaPage';
+import { ReportesPage } from '@/pages/ReportesPage';
 export const AppRoutes: React.FC = () => {
     const { isLoading, loadUser } = useAuthStore();
 
@@ -164,6 +164,17 @@ export const AppRoutes: React.FC = () => {
                 element={
                     <ProtectedRoute>
                         <PerfilPage />
+                    </ProtectedRoute>
+                }
+            />
+            {/* Reportes - ADMINISTRADOR, SUPERVISOR */}
+            <Route
+                path="/reportes"
+                element={
+                    <ProtectedRoute>
+                        <PermissionGuard requiredModules={['reportes']}>
+                            <ReportesPage />
+                        </PermissionGuard>
                     </ProtectedRoute>
                 }
             />
