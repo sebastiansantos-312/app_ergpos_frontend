@@ -1,12 +1,13 @@
+// En types/producto.ts o donde definas los tipos
 export interface ProductoRequest {
     codigo: string;
     nombre: string;
     descripcion?: string | null;
-    codigoCategoria?: string;
-    precio: number;
-    stockMinimo?: number;
-    stockActual?: number;
-    unidadMedida?: string;
+    codigoCategoria: string; 
+    precio: number; 
+    stockMinimo: number;
+    stockActual: number;
+    unidadMedida: string;
 }
 
 export interface ProductoResponse {
@@ -15,6 +16,7 @@ export interface ProductoResponse {
     nombre: string;
     descripcion?: string;
     categoriaId?: string;
+    categoriaCodigo?: string;
     categoriaNombre?: string;
     precio: number;
     stockMinimo: number;

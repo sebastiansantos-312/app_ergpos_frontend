@@ -42,7 +42,7 @@ export const useAuthStore = create<AuthState>((set) => ({
       // Cargar información completa del usuario
       const userInfo = await authService.getCurrentUser();
       localStorage.setItem('user', JSON.stringify(userInfo));
-      
+
       if (!userInfo.activo) {
         // Limpiar localStorage
         localStorage.removeItem('token');
@@ -63,14 +63,37 @@ export const useAuthStore = create<AuthState>((set) => ({
         error: null
       });
     } catch (error: any) {
-      const errorMessage = error.response?.data?.message || error.message || 'Error en el login';
+      // Extraer el mensaje de error del backend
+      let errorMessage = 'Error en el login';
+
+      if (error.response?.data) {
+        // Si el backend devuelve un objeto con message
+        errorMessage = error.response.data.message || errorMessage;
+
+        // Manejar códigos de error específicos
+        if (error.response.data.code === 'USER_INACTIVE') {
+          errorMessage = 'Tu cuenta está inactiva. Contacta al administrador.';
+        } else if (error.response.data.code === 'INVALID_CREDENTIALS') {
+          errorMessage = 'Usuario o contraseña incorrectos.';
+        } else if (error.response.data.code === 'TOO_MANY_ATTEMPTS') {
+          errorMessage = error.response.data.message; // Usar el mensaje del backend que incluye el tiempo
+        }
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+
+      console.log('🔴 Error extraído del backend:', errorMessage); // DEBUG
+      console.log('🔴 Datos completos del error:', error.response?.data); // DEBUG
+
       set({
         error: errorMessage,
         isLoading: false,
         isAuthenticated: false,
         user: null
       });
-      throw error;
+
+      // No lanzar el error para que el componente pueda mostrar el mensaje
+      console.error('Login error completo:', error);
     }
   },
 

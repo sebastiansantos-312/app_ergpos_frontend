@@ -52,17 +52,24 @@ export const productoSchema = z.object({
         .nullable()
         .transform(val => val === '' ? null : val),
     codigoCategoria: z.string()
-        .optional()
-        .nullable()
-        .transform(val => val === '' ? undefined : val),
-    precio: z.number().min(0.01, 'El precio debe ser mayor a 0'),
-    stockMinimo: z.number().min(0, 'El stock mínimo no puede ser negativo').default(0),
-    stockActual: z.number().min(0, 'El stock actual no puede ser negativo').default(0),
+        .min(1, 'La categoría es obligatoria'),
+    precio: z.number()
+        .min(0.01, 'El precio debe ser mayor a 0')
+        .positive('El precio debe ser positivo'),
+    stockMinimo: z.number()
+        .min(0, 'El stock mínimo no puede ser negativo')
+        .default(0),
+    stockActual: z.number()
+        .min(0, 'El stock actual no puede ser negativo')
+        .default(0),
     unidadMedida: z.string()
+        .min(1, 'La unidad de medida es obligatoria') // ¡CORRECCIÓN!
         .max(20, 'Máximo 20 caracteres')
         .default('UNIDAD'),
+}).refine((data) => data.stockActual >= data.stockMinimo, {
+    message: 'El stock actual no puede ser menor al stock mínimo',
+    path: ['stockActual'],
 });
-// Tipo inferido del schema
 
 // ============ CATEGORIA SCHEMAS ============
 export const categoriaSchema = z.object({

@@ -11,7 +11,7 @@ export interface UsuarioUpdateRequest {
     email: string;
     password?: string;
     codigo?: string;
-    nombreRol: string;
+    rol: string;
 }
 
 export interface UsuarioRequest {
